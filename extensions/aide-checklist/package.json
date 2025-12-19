@@ -1,0 +1,30 @@
+{
+  "name": "aide-checklist",
+  "displayName": "AIDE Checklist",
+  "description": "AIDE project checklist (AIDE_CHECKLIST.md): init + open commands.",
+  "version": "0.0.1",
+  "publisher": "aide",
+  "private": true,
+  "engines": {
+    "vscode": "^1.108.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onCommand:aide.checklist.init",
+    "onCommand:aide.checklist.open",
+    "workspaceContains:AIDE_CHECKLIST.md"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aide.checklist.init",
+        "title": "AIDE: Init Checklist"
+      },
+      {
+        "command": "aide.checklist.open",
+        "title": "AIDE: Open Checklist"
+      }
+    ]
+  }
+}
