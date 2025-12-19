@@ -16,6 +16,9 @@ import eslint from './gulp-eslint.ts';
 import * as formatter from './lib/formatter.ts';
 import gulpstylelint from './stylelint.ts';
 
+
+const AIDE_MAX_STDIO_BUFFER = 50 * 1024 * 1024;
+
 const copyrightHeaderLines = [
 	'/*---------------------------------------------------------------------------------------------',
 	' *  Copyright (c) Microsoft Corporation. All rights reserved.',
@@ -241,8 +244,8 @@ function createGitIndexVinyls(paths: string[]): Promise<VinylFile[]> {
 				}
 
 				cp.exec(
-					process.platform === 'win32' ? `git show :${relativePath}` : `git show ':${relativePath}'`,
-					{ maxBuffer: stat.size, encoding: 'buffer' },
+					process.platform === 'win32' ? `git --no-pager show :${relativePath}` : `git --no-pager show ':${relativePath}'`,
+					{ maxBuffer: Math.max(AIDE_MAX_STDIO_BUFFER, stat.size + 1024 * 1024), encoding: 'buffer' },
 					(err, out) => {
 						if (err) {
 							return e(err);
