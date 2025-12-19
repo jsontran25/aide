@@ -2,7 +2,7 @@
   "name": "aide-chat",
   "displayName": "AIDE Chat",
   "description": "AIDE chat surface (UI only).",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "publisher": "aide",
   "license": "MIT",
   "private": true,
@@ -11,11 +11,19 @@
   "categories": ["Other"],
   "activationEvents": [
     "onStartupFinished",
-    "onView:aideChat.session",
-    "onCommand:aide.chat.focus",
-    "onCommand:aide.chat.refresh"
+    "onView:aideChat.session"
   ],
   "contributes": {
+    "configuration": {
+      "title": "AIDE",
+      "properties": {
+        "aide.chat.defaultRightSide": {
+          "type": "boolean",
+          "default": true,
+          "description": "Try to place AIDE Chat in the secondary side bar on first run."
+        }
+      }
+    },
     "viewsContainers": {
       "activitybar": [
         { "id": "aideChat", "title": "Chat", "icon": "resources/aide-chat.svg" }
@@ -23,34 +31,70 @@
     },
     "views": {
       "aideChat": [
-        { "id": "aideChat.session", "name": "AIDE Chat" }
+        { "id": "aideChat.session", "name": "AIDE" }
       ]
     },
+    "submenus": [
+      {
+        "id": "aide.chat.contextMenu",
+        "label": "Context"
+      }
+    ],
     "commands": [
-      { "command": "aide.chat.focus", "title": "AIDE: Focus Chat" },
-      { "command": "aide.chat.refresh", "title": "AIDE: Refresh Chat" }
+      { "command": "aide.chat.context.roadmap", "category": "AIDE", "title": "Roadmap" },
+      { "command": "aide.chat.context.checklist", "category": "AIDE", "title": "Checklist" },
+      { "command": "aide.chat.context.todos", "category": "AIDE", "title": "Todos" },
+      { "command": "aide.chat.context.snapshots", "category": "AIDE", "title": "Snapshots" },
+
+      { "command": "aide.chat.sync", "category": "AIDE", "title": "Sync" },
+      { "command": "aide.chat.snapshot", "category": "AIDE", "title": "Snapshot" },
+      { "command": "aide.chat.openChecklist", "category": "AIDE", "title": "Checklist" },
+      { "command": "aide.chat.refresh", "category": "AIDE", "title": "Refresh" }
     ],
     "menus": {
       "view/title": [
         {
           "when": "view == aideChat.session",
-          "command": "aide.checklist.sync",
-          "group": "navigation"
+          "submenu": "aide.chat.contextMenu",
+          "group": "navigation@0"
         },
         {
           "when": "view == aideChat.session",
-          "command": "aide.checklist.snapshot",
-          "group": "navigation"
+          "command": "aide.chat.sync",
+          "group": "navigation@1"
         },
         {
           "when": "view == aideChat.session",
-          "command": "aide.checklist.open",
-          "group": "navigation"
+          "command": "aide.chat.snapshot",
+          "group": "navigation@2"
+        },
+        {
+          "when": "view == aideChat.session",
+          "command": "aide.chat.openChecklist",
+          "group": "navigation@3"
         },
         {
           "when": "view == aideChat.session",
           "command": "aide.chat.refresh",
-          "group": "navigation"
+          "group": "navigation@4"
+        }
+      ],
+      "aide.chat.contextMenu": [
+        {
+          "command": "aide.chat.context.roadmap",
+          "group": "1"
+        },
+        {
+          "command": "aide.chat.context.checklist",
+          "group": "1"
+        },
+        {
+          "command": "aide.chat.context.todos",
+          "group": "1"
+        },
+        {
+          "command": "aide.chat.context.snapshots",
+          "group": "1"
         }
       ]
     }
