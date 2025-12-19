@@ -1,0 +1,58 @@
+{
+  "name": "aide-chat",
+  "displayName": "AIDE Chat",
+  "description": "AIDE chat surface (UI only).",
+  "version": "0.1.0",
+  "publisher": "aide",
+  "license": "MIT",
+  "private": true,
+  "engines": { "vscode": "^1.108.0" },
+  "main": "./src/extension.js",
+  "categories": ["Other"],
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:aideChat.session",
+    "onCommand:aide.chat.focus",
+    "onCommand:aide.chat.refresh"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "aideChat", "title": "Chat", "icon": "resources/aide-chat.svg" }
+      ]
+    },
+    "views": {
+      "aideChat": [
+        { "id": "aideChat.session", "name": "AIDE Chat" }
+      ]
+    },
+    "commands": [
+      { "command": "aide.chat.focus", "title": "AIDE: Focus Chat" },
+      { "command": "aide.chat.refresh", "title": "AIDE: Refresh Chat" }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "when": "view == aideChat.session",
+          "command": "aide.checklist.sync",
+          "group": "navigation"
+        },
+        {
+          "when": "view == aideChat.session",
+          "command": "aide.checklist.snapshot",
+          "group": "navigation"
+        },
+        {
+          "when": "view == aideChat.session",
+          "command": "aide.checklist.open",
+          "group": "navigation"
+        },
+        {
+          "when": "view == aideChat.session",
+          "command": "aide.chat.refresh",
+          "group": "navigation"
+        }
+      ]
+    }
+  }
+}
