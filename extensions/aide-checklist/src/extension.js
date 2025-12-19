@@ -6,7 +6,6 @@
 'use strict';
 
 const vscode = require('vscode');
-const path = require('path');
 const cp = require('child_process');
 
 const CHECKLIST_FILENAME = 'AIDE_CHECKLIST.md';
@@ -31,7 +30,6 @@ function safeJsonParse(text, fallback) {
 async function getWorkspaceRootUri() {
 	const folders = vscode.workspace.workspaceFolders;
 	if (!folders || folders.length === 0) {
-		vscode.window.showErrorMessage('AIDE: Please open a folder/workspace first.');
 		return null;
 	}
 	return folders[0].uri;
@@ -81,7 +79,7 @@ function defaultChecklistTemplate() {
 		'\t- [ ] TASK-003: Create built-in extension skeleton (aide-checklist)',
 		'',
 		'- [ ] M2 - Checklist + Brain MVP',
-		'\t- [ ] TASK-010: Parser + state sync',
+		'\t- [ ] TASK-010: State sync + view',
 		'\t- [ ] TASK-011: Mark done + snapshot',
 		'',
 		'## Current Task',
@@ -159,26 +157,20 @@ async function logEvent(rootUri, event) {
 }
 
 function parseTasksFromChecklist(text) {
-	// Matches: - [ ] TASK-123: Title
-	// Also supports nested items with leading tabs/spaces.
 	const re = /^(\s*[-*]\s+\[( |x|X)\]\s+)(TASK-\d+)\s*:\s*(.+)\s*$/gm;
 	const tasks = [];
 	let m;
 	while ((m = re.exec(text)) !== null) {
 		tasks.push({
-			prefix: m[1],
 			checked: m[2].toLowerCase() === 'x',
 			id: m[3],
-			title: m[4],
-			index: m.index,
-			match: m[0]
+			title: m[4]
 		});
 	}
 	return tasks;
 }
 
 function applyTaskChecksToChecklist(text, desired) {
-	// desired: Map TASK-ID -> boolean checked
 	const re = /^(\s*[-*]\s+\[)( |x|X)(\]\s+)(TASK-\d+)(\s*:\s*.+)\s*$/gm;
 	return text.replace(re, (full, a, chk, b, id, rest) => {
 		if (Object.prototype.hasOwnProperty.call(desired, id)) {
@@ -208,7 +200,6 @@ async function syncChecklistAndState(rootUri) {
 	const checklistText = await readFileText(fileUri);
 	const tasks = parseTasksFromChecklist(checklistText);
 
-	// Merge: checklist -> state (discover tasks and titles)
 	for (const t of tasks) {
 		if (!state.tasks[t.id]) {
 			state.tasks[t.id] = {
@@ -220,10 +211,8 @@ async function syncChecklistAndState(rootUri) {
 				evidence: []
 			};
 		} else {
-			// keep title fresh if changed
 			state.tasks[t.id].title = t.title;
 			state.tasks[t.id].updatedAt = nowIso();
-			// if checklist already checked, reflect it
 			if (t.checked && state.tasks[t.id].status !== 'done') {
 				state.tasks[t.id].status = 'done';
 				state.tasks[t.id].evidence = state.tasks[t.id].evidence || [];
@@ -232,7 +221,6 @@ async function syncChecklistAndState(rootUri) {
 		}
 	}
 
-	// State -> checklist (authoritative status)
 	const desired = {};
 	for (const id of Object.keys(state.tasks)) {
 		desired[id] = state.tasks[id].status === 'done';
@@ -245,7 +233,6 @@ async function syncChecklistAndState(rootUri) {
 
 	state.lastSyncAt = nowIso();
 	await writeFileText(stateUri, JSON.stringify(state, null, '\t') + '\n');
-
 	await logEvent(rootUri, { type: 'sync', tasksFound: tasks.length });
 
 	return { fileUri, stateUri, state, tasksFound: tasks.length };
@@ -266,7 +253,6 @@ async function markTaskDone(rootUri, taskId, note) {
 	await writeFileText(stateUri, JSON.stringify(state, null, '\t') + '\n');
 	await logEvent(rootUri, { type: 'markDone', taskId });
 
-	// sync into checklist
 	await syncChecklistAndState(rootUri);
 }
 
@@ -274,8 +260,7 @@ async function captureSnapshot(rootUri) {
 	const { state } = await ensureState(rootUri);
 	const { snapshotsDirUri } = await ensureAideDir(rootUri);
 
-	const rootFsPath = rootUri.fsPath;
-	const head = await readGitHead(rootFsPath);
+	const head = await readGitHead(rootUri.fsPath);
 
 	const payload = {
 		ts: nowIso(),
@@ -292,34 +277,109 @@ async function captureSnapshot(rootUri) {
 	return snapUri;
 }
 
+class TaskItem extends vscode.TreeItem {
+	constructor(task, isDone) {
+		super(`${task.id}: ${task.title}`, vscode.TreeItemCollapsibleState.None);
+		this.id = task.id;
+		this.description = isDone ? 'done' : 'todo';
+		this.contextValue = isDone ? 'aideTaskDone' : 'aideTaskTodo';
+		this.iconPath = isDone ? new vscode.ThemeIcon('check') : new vscode.ThemeIcon('circle-outline');
+		this.tooltip = `${task.id}\n${task.title}\nstatus: ${isDone ? 'done' : 'todo'}`;
+	}
+}
+
+class ChecklistTasksProvider {
+	constructor(getRootUri) {
+		this._getRootUri = getRootUri;
+		this._onDidChangeTreeData = new vscode.EventEmitter();
+		this.onDidChangeTreeData = this._onDidChangeTreeData.event;
+	}
+
+	refresh() {
+		this._onDidChangeTreeData.fire();
+	}
+
+	async getTreeItem(element) {
+		return element;
+	}
+
+	async getChildren() {
+		const rootUri = await this._getRootUri();
+		if (!rootUri) {
+			return [];
+		}
+
+		const { state } = await ensureState(rootUri);
+		const tasks = Object.values(state.tasks || {});
+		tasks.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+
+		return tasks.map(t => new TaskItem(t, t.status === 'done'));
+	}
+}
+
+async function maybeAutoInit() {
+	const rootUri = await getWorkspaceRootUri();
+	if (!rootUri) {
+		return;
+	}
+
+	const cfg = vscode.workspace.getConfiguration('aide.checklist');
+	const autoInit = cfg.get('autoInit', true);
+	if (!autoInit) {
+		return;
+	}
+
+	const { aideDirUri } = await ensureAideDir(rootUri);
+	const stateUri = vscode.Uri.joinPath(aideDirUri, STATE_FILENAME);
+
+	let hasState = true;
+	try {
+		await vscode.workspace.fs.stat(stateUri);
+	} catch {
+		hasState = false;
+	}
+
+	if (!hasState) {
+		await ensureState(rootUri);
+
+		const autoCreateChecklist = cfg.get('autoCreateChecklist', false);
+		if (autoCreateChecklist) {
+			await ensureChecklistFile(rootUri);
+			await syncChecklistAndState(rootUri);
+		}
+
+		vscode.window.setStatusBarMessage('AIDE initialized for this workspace.', 3000);
+		await logEvent(rootUri, { type: 'autoInit', createdChecklist: !!autoCreateChecklist });
+	}
+}
+
 /**
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
+	const provider = new ChecklistTasksProvider(getWorkspaceRootUri);
+	context.subscriptions.push(vscode.window.registerTreeDataProvider('aideChecklist.tasks', provider));
+
 	const initCmd = vscode.commands.registerCommand('aide.checklist.init', async () => {
 		const rootUri = await getWorkspaceRootUri();
 		if (!rootUri) {
+			vscode.window.showErrorMessage('AIDE: Please open a folder/workspace first.');
 			return;
 		}
-
 		const res = await ensureChecklistFile(rootUri);
 		await ensureState(rootUri);
 		await syncChecklistAndState(rootUri);
 		await openFile(res.fileUri);
-
-		vscode.window.showInformationMessage(
-			res.existed
-				? 'AIDE checklist already exists. Synced AIDE_CHECKLIST.md.'
-				: 'Created AIDE_CHECKLIST.md and initialized .aide state.'
-		);
+		provider.refresh();
+		vscode.window.showInformationMessage(res.existed ? 'AIDE checklist synced.' : 'AIDE checklist created and synced.');
 	});
 
 	const openCmd = vscode.commands.registerCommand('aide.checklist.open', async () => {
 		const rootUri = await getWorkspaceRootUri();
 		if (!rootUri) {
+			vscode.window.showErrorMessage('AIDE: Please open a folder/workspace first.');
 			return;
 		}
-
 		const fileUri = vscode.Uri.joinPath(rootUri, CHECKLIST_FILENAME);
 		try {
 			await vscode.workspace.fs.stat(fileUri);
@@ -332,15 +392,18 @@ function activate(context) {
 	const syncCmd = vscode.commands.registerCommand('aide.checklist.sync', async () => {
 		const rootUri = await getWorkspaceRootUri();
 		if (!rootUri) {
+			vscode.window.showErrorMessage('AIDE: Please open a folder/workspace first.');
 			return;
 		}
 		const r = await syncChecklistAndState(rootUri);
-		vscode.window.showInformationMessage(`AIDE synced checklist (tasks: ${r.tasksFound}).`);
+		provider.refresh();
+		vscode.window.setStatusBarMessage(`AIDE synced (tasks: ${r.tasksFound}).`, 3000);
 	});
 
 	const markDoneCmd = vscode.commands.registerCommand('aide.checklist.markDone', async () => {
 		const rootUri = await getWorkspaceRootUri();
 		if (!rootUri) {
+			vscode.window.showErrorMessage('AIDE: Please open a folder/workspace first.');
 			return;
 		}
 
@@ -353,7 +416,7 @@ function activate(context) {
 
 		const pick = await vscode.window.showQuickPick(taskIds.map(id => {
 			const t = state.tasks[id];
-			const label = `${id} ${t.status === 'done' ? '(done)' : '(todo)'}`;
+			const label = `${id} (${t.status === 'done' ? 'done' : 'todo'})`;
 			return { label, id };
 		}), { placeHolder: 'Select a task to mark done' });
 
@@ -363,20 +426,54 @@ function activate(context) {
 
 		const note = await vscode.window.showInputBox({ prompt: 'Optional note/evidence (stored in .aide/state.json)', value: '' });
 		await markTaskDone(rootUri, pick.id, note || '');
+		provider.refresh();
 		vscode.window.showInformationMessage(`AIDE marked ${pick.id} as done.`);
 	});
 
 	const snapshotCmd = vscode.commands.registerCommand('aide.checklist.snapshot', async () => {
 		const rootUri = await getWorkspaceRootUri();
 		if (!rootUri) {
+			vscode.window.showErrorMessage('AIDE: Please open a folder/workspace first.');
 			return;
 		}
 		const snapUri = await captureSnapshot(rootUri);
+		provider.refresh();
 		await openFile(snapUri);
 		vscode.window.showInformationMessage('AIDE snapshot captured.');
 	});
 
-	context.subscriptions.push(initCmd, openCmd, syncCmd, markDoneCmd, snapshotCmd);
+	const refreshCmd = vscode.commands.registerCommand('aide.checklist.refreshView', async () => {
+		provider.refresh();
+	});
+
+	context.subscriptions.push(initCmd, openCmd, syncCmd, markDoneCmd, snapshotCmd, refreshCmd);
+
+	// Watch for state/checklist changes and refresh view.
+	(async () => {
+		const rootUri = await getWorkspaceRootUri();
+		if (!rootUri) {
+			return;
+		}
+
+		const statePattern = new vscode.RelativePattern(rootUri, `${AIDE_DIRNAME}/${STATE_FILENAME}`);
+		const checklistPattern = new vscode.RelativePattern(rootUri, CHECKLIST_FILENAME);
+
+		const w1 = vscode.workspace.createFileSystemWatcher(statePattern);
+		const w2 = vscode.workspace.createFileSystemWatcher(checklistPattern);
+
+		w1.onDidChange(() => provider.refresh());
+		w1.onDidCreate(() => provider.refresh());
+		w1.onDidDelete(() => provider.refresh());
+
+		w2.onDidChange(() => provider.refresh());
+		w2.onDidCreate(() => provider.refresh());
+		w2.onDidDelete(() => provider.refresh());
+
+		context.subscriptions.push(w1, w2);
+	})();
+
+	// Auto-init (local only).
+	void maybeAutoInit();
 }
 
 function deactivate() {}

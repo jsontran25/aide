@@ -1,8 +1,8 @@
 {
   "name": "aide-checklist",
   "displayName": "AIDE Checklist",
-  "description": "Create and manage AIDE_CHECKLIST.md with a hidden .aide brain.",
-  "version": "0.0.2",
+  "description": "AIDE checklist and hidden .aide state.",
+  "version": "0.1.0",
   "publisher": "aide",
   "license": "MIT",
   "private": true,
@@ -10,10 +10,10 @@
     "vscode": "^1.108.0"
   },
   "main": "./src/extension.js",
-  "categories": [
-    "Other"
-  ],
+  "categories": ["Other"],
   "activationEvents": [
+    "onStartupFinished",
+    "onView:aideChecklist.tasks",
     "onCommand:aide.checklist.init",
     "onCommand:aide.checklist.open",
     "onCommand:aide.checklist.sync",
@@ -21,27 +21,76 @@
     "onCommand:aide.checklist.snapshot"
   ],
   "contributes": {
-    "commands": [
-      {
-        "command": "aide.checklist.init",
-        "title": "AIDE: Init Checklist"
-      },
-      {
-        "command": "aide.checklist.open",
-        "title": "AIDE: Open Checklist"
-      },
-      {
-        "command": "aide.checklist.sync",
-        "title": "AIDE: Sync Checklist"
-      },
-      {
-        "command": "aide.checklist.markDone",
-        "title": "AIDE: Mark Task Done"
-      },
-      {
-        "command": "aide.checklist.snapshot",
-        "title": "AIDE: Capture Snapshot"
+    "configuration": {
+      "title": "AIDE",
+      "properties": {
+        "aide.checklist.autoInit": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto initialize .aide state when opening a workspace (local only)."
+        },
+        "aide.checklist.autoCreateChecklist": {
+          "type": "boolean",
+          "default": false,
+          "description": "Auto create AIDE_CHECKLIST.md during auto-init."
+        }
       }
-    ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aide",
+          "title": "AIDE",
+          "icon": "resources/aide.svg"
+        }
+      ]
+    },
+    "views": {
+      "aide": [
+        {
+          "id": "aideChecklist.tasks",
+          "name": "Checklist"
+        }
+      ]
+    },
+    "commands": [
+      { "command": "aide.checklist.init", "title": "AIDE: Init Checklist" },
+      { "command": "aide.checklist.open", "title": "AIDE: Open Checklist" },
+      { "command": "aide.checklist.sync", "title": "AIDE: Sync Checklist" },
+      { "command": "aide.checklist.markDone", "title": "AIDE: Mark Task Done" },
+      { "command": "aide.checklist.snapshot", "title": "AIDE: Capture Snapshot" },
+      { "command": "aide.checklist.refreshView", "title": "AIDE: Refresh Checklist View" }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "when": "view == aideChecklist.tasks",
+          "command": "aide.checklist.sync",
+          "group": "navigation"
+        },
+        {
+          "when": "view == aideChecklist.tasks",
+          "command": "aide.checklist.snapshot",
+          "group": "navigation"
+        },
+        {
+          "when": "view == aideChecklist.tasks",
+          "command": "aide.checklist.refreshView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "when": "view == aideChecklist.tasks && viewItem == aideTaskTodo",
+          "command": "aide.checklist.markDone",
+          "group": "inline"
+        },
+        {
+          "when": "view == aideChecklist.tasks",
+          "command": "aide.checklist.open",
+          "group": "navigation"
+        }
+      ]
+    }
   }
 }
