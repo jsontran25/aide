@@ -1,20 +1,25 @@
 {
   "name": "aide-checklist",
   "displayName": "AIDE Checklist",
-  "description": "AIDE project checklist (AIDE_CHECKLIST.md): init + open commands.",
-  "version": "0.0.1",
+  "description": "Create and manage AIDE_CHECKLIST.md with a hidden .aide brain.",
+  "version": "0.0.2",
   "publisher": "aide",
+  "license": "MIT",
   "private": true,
   "engines": {
     "vscode": "^1.108.0"
   },
-  "categories": ["Other"],
+  "main": "./src/extension.js",
+  "categories": [
+    "Other"
+  ],
   "activationEvents": [
     "onCommand:aide.checklist.init",
     "onCommand:aide.checklist.open",
-    "workspaceContains:AIDE_CHECKLIST.md"
+    "onCommand:aide.checklist.sync",
+    "onCommand:aide.checklist.markDone",
+    "onCommand:aide.checklist.snapshot"
   ],
-  "main": "./src/extension.js",
   "contributes": {
     "commands": [
       {
@@ -24,6 +29,18 @@
       {
         "command": "aide.checklist.open",
         "title": "AIDE: Open Checklist"
+      },
+      {
+        "command": "aide.checklist.sync",
+        "title": "AIDE: Sync Checklist"
+      },
+      {
+        "command": "aide.checklist.markDone",
+        "title": "AIDE: Mark Task Done"
+      },
+      {
+        "command": "aide.checklist.snapshot",
+        "title": "AIDE: Capture Snapshot"
       }
     ]
   }

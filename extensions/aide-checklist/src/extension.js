@@ -6,13 +6,64 @@
 'use strict';
 
 const vscode = require('vscode');
+const path = require('path');
+const cp = require('child_process');
 
 const CHECKLIST_FILENAME = 'AIDE_CHECKLIST.md';
+const AIDE_DIRNAME = '.aide';
+const STATE_FILENAME = 'state.json';
+const EVENTS_FILENAME = 'events.log';
+const SNAPSHOTS_DIRNAME = 'snapshots';
+const SCHEMA_VERSION = 1;
+
+function nowIso() {
+	return new Date().toISOString();
+}
+
+function safeJsonParse(text, fallback) {
+	try {
+		return JSON.parse(text);
+	} catch {
+		return fallback;
+	}
+}
+
+async function getWorkspaceRootUri() {
+	const folders = vscode.workspace.workspaceFolders;
+	if (!folders || folders.length === 0) {
+		vscode.window.showErrorMessage('AIDE: Please open a folder/workspace first.');
+		return null;
+	}
+	return folders[0].uri;
+}
+
+async function readFileText(uri) {
+	const data = await vscode.workspace.fs.readFile(uri);
+	return new TextDecoder('utf-8').decode(data);
+}
+
+async function writeFileText(uri, text) {
+	const data = new TextEncoder().encode(text);
+	await vscode.workspace.fs.writeFile(uri, data);
+}
+
+async function appendFileText(uri, text) {
+	let existing = '';
+	try {
+		existing = await readFileText(uri);
+	} catch {
+		// ignore
+	}
+	await writeFileText(uri, existing + text);
+}
+
+async function openFile(uri) {
+	const doc = await vscode.workspace.openTextDocument(uri);
+	await vscode.window.showTextDocument(doc, { preview: false });
+}
 
 function defaultChecklistTemplate() {
 	const today = new Date().toISOString().slice(0, 10);
-
-	// Keep this file ASCII-only to satisfy VS Code hygiene.
 	const lines = [
 		'# AIDE Project Checklist',
 		'',
@@ -30,9 +81,8 @@ function defaultChecklistTemplate() {
 		'\t- [ ] TASK-003: Create built-in extension skeleton (aide-checklist)',
 		'',
 		'- [ ] M2 - Checklist + Brain MVP',
-		'\t- [ ] TASK-010: Parser + patcher for checklist',
-		'\t- [ ] TASK-011: Hidden brain store (local)',
-		'\t- [ ] TASK-012: Check engine (validate -> auto-tick)',
+		'\t- [ ] TASK-010: Parser + state sync',
+		'\t- [ ] TASK-011: Mark done + snapshot',
 		'',
 		'## Current Task',
 		'- TASK-003',
@@ -43,37 +93,203 @@ function defaultChecklistTemplate() {
 		'<!-- AIDE:END -->',
 		''
 	];
-
 	return lines.join('\n');
-}
-
-async function openFile(uri) {
-	const doc = await vscode.workspace.openTextDocument(uri);
-	await vscode.window.showTextDocument(doc, { preview: false });
-}
-
-async function getWorkspaceRootUri() {
-	const folders = vscode.workspace.workspaceFolders;
-	if (!folders || folders.length === 0) {
-		vscode.window.showErrorMessage('AIDE: Please open a folder/workspace first.');
-		return null;
-	}
-	return folders[0].uri;
 }
 
 async function ensureChecklistFile(rootUri) {
 	const fileUri = vscode.Uri.joinPath(rootUri, CHECKLIST_FILENAME);
-
 	try {
 		await vscode.workspace.fs.stat(fileUri);
 		return { fileUri, existed: true };
 	} catch {
 		// continue
 	}
-
-	const data = new TextEncoder().encode(defaultChecklistTemplate());
-	await vscode.workspace.fs.writeFile(fileUri, data);
+	await writeFileText(fileUri, defaultChecklistTemplate());
 	return { fileUri, existed: false };
+}
+
+async function ensureAideDir(rootUri) {
+	const aideDirUri = vscode.Uri.joinPath(rootUri, AIDE_DIRNAME);
+	await vscode.workspace.fs.createDirectory(aideDirUri);
+
+	const snapshotsDirUri = vscode.Uri.joinPath(aideDirUri, SNAPSHOTS_DIRNAME);
+	await vscode.workspace.fs.createDirectory(snapshotsDirUri);
+
+	return { aideDirUri, snapshotsDirUri };
+}
+
+function newStateObject(projectId) {
+	return {
+		schemaVersion: SCHEMA_VERSION,
+		projectId,
+		createdAt: nowIso(),
+		lastSyncAt: null,
+		tasks: {},
+		meta: {
+			notes: ''
+		}
+	};
+}
+
+async function ensureState(rootUri) {
+	const { aideDirUri } = await ensureAideDir(rootUri);
+	const stateUri = vscode.Uri.joinPath(aideDirUri, STATE_FILENAME);
+
+	try {
+		const text = await readFileText(stateUri);
+		const parsed = safeJsonParse(text, null);
+		if (parsed && typeof parsed === 'object') {
+			return { stateUri, state: parsed };
+		}
+	} catch {
+		// continue
+	}
+
+	const projectId = `aide-${Math.random().toString(16).slice(2)}-${Date.now()}`;
+	const state = newStateObject(projectId);
+	await writeFileText(stateUri, JSON.stringify(state, null, '\t') + '\n');
+	return { stateUri, state };
+}
+
+async function logEvent(rootUri, event) {
+	const { aideDirUri } = await ensureAideDir(rootUri);
+	const eventsUri = vscode.Uri.joinPath(aideDirUri, EVENTS_FILENAME);
+	const line = JSON.stringify({ ts: nowIso(), ...event }) + '\n';
+	await appendFileText(eventsUri, line);
+}
+
+function parseTasksFromChecklist(text) {
+	// Matches: - [ ] TASK-123: Title
+	// Also supports nested items with leading tabs/spaces.
+	const re = /^(\s*[-*]\s+\[( |x|X)\]\s+)(TASK-\d+)\s*:\s*(.+)\s*$/gm;
+	const tasks = [];
+	let m;
+	while ((m = re.exec(text)) !== null) {
+		tasks.push({
+			prefix: m[1],
+			checked: m[2].toLowerCase() === 'x',
+			id: m[3],
+			title: m[4],
+			index: m.index,
+			match: m[0]
+		});
+	}
+	return tasks;
+}
+
+function applyTaskChecksToChecklist(text, desired) {
+	// desired: Map TASK-ID -> boolean checked
+	const re = /^(\s*[-*]\s+\[)( |x|X)(\]\s+)(TASK-\d+)(\s*:\s*.+)\s*$/gm;
+	return text.replace(re, (full, a, chk, b, id, rest) => {
+		if (Object.prototype.hasOwnProperty.call(desired, id)) {
+			const want = desired[id] ? 'x' : ' ';
+			return `${a}${want}${b}${id}${rest}`;
+		}
+		return full;
+	});
+}
+
+async function readGitHead(rootFsPath) {
+	return await new Promise((resolve) => {
+		cp.execFile('git', ['rev-parse', 'HEAD'], { cwd: rootFsPath }, (err, stdout) => {
+			if (err) {
+				resolve(null);
+				return;
+			}
+			resolve(String(stdout).trim() || null);
+		});
+	});
+}
+
+async function syncChecklistAndState(rootUri) {
+	const { fileUri } = await ensureChecklistFile(rootUri);
+	const { stateUri, state } = await ensureState(rootUri);
+
+	const checklistText = await readFileText(fileUri);
+	const tasks = parseTasksFromChecklist(checklistText);
+
+	// Merge: checklist -> state (discover tasks and titles)
+	for (const t of tasks) {
+		if (!state.tasks[t.id]) {
+			state.tasks[t.id] = {
+				id: t.id,
+				title: t.title,
+				status: t.checked ? 'done' : 'todo',
+				createdAt: nowIso(),
+				updatedAt: nowIso(),
+				evidence: []
+			};
+		} else {
+			// keep title fresh if changed
+			state.tasks[t.id].title = t.title;
+			state.tasks[t.id].updatedAt = nowIso();
+			// if checklist already checked, reflect it
+			if (t.checked && state.tasks[t.id].status !== 'done') {
+				state.tasks[t.id].status = 'done';
+				state.tasks[t.id].evidence = state.tasks[t.id].evidence || [];
+				state.tasks[t.id].evidence.push({ type: 'manual', ts: nowIso(), note: 'Checked in checklist' });
+			}
+		}
+	}
+
+	// State -> checklist (authoritative status)
+	const desired = {};
+	for (const id of Object.keys(state.tasks)) {
+		desired[id] = state.tasks[id].status === 'done';
+	}
+
+	const patched = applyTaskChecksToChecklist(checklistText, desired);
+	if (patched !== checklistText) {
+		await writeFileText(fileUri, patched);
+	}
+
+	state.lastSyncAt = nowIso();
+	await writeFileText(stateUri, JSON.stringify(state, null, '\t') + '\n');
+
+	await logEvent(rootUri, { type: 'sync', tasksFound: tasks.length });
+
+	return { fileUri, stateUri, state, tasksFound: tasks.length };
+}
+
+async function markTaskDone(rootUri, taskId, note) {
+	const { stateUri, state } = await ensureState(rootUri);
+
+	if (!state.tasks || !state.tasks[taskId]) {
+		throw new Error(`Unknown task: ${taskId}`);
+	}
+
+	state.tasks[taskId].status = 'done';
+	state.tasks[taskId].updatedAt = nowIso();
+	state.tasks[taskId].evidence = state.tasks[taskId].evidence || [];
+	state.tasks[taskId].evidence.push({ type: 'manual', ts: nowIso(), note: note || '' });
+
+	await writeFileText(stateUri, JSON.stringify(state, null, '\t') + '\n');
+	await logEvent(rootUri, { type: 'markDone', taskId });
+
+	// sync into checklist
+	await syncChecklistAndState(rootUri);
+}
+
+async function captureSnapshot(rootUri) {
+	const { state } = await ensureState(rootUri);
+	const { snapshotsDirUri } = await ensureAideDir(rootUri);
+
+	const rootFsPath = rootUri.fsPath;
+	const head = await readGitHead(rootFsPath);
+
+	const payload = {
+		ts: nowIso(),
+		gitHead: head,
+		state
+	};
+
+	const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+	const snapUri = vscode.Uri.joinPath(snapshotsDirUri, `snapshot-${stamp}.json`);
+	await writeFileText(snapUri, JSON.stringify(payload, null, '\t') + '\n');
+
+	await logEvent(rootUri, { type: 'snapshot', gitHead: head });
+
+	return snapUri;
 }
 
 /**
@@ -86,13 +302,15 @@ function activate(context) {
 			return;
 		}
 
-		const result = await ensureChecklistFile(rootUri);
-		await openFile(result.fileUri);
+		const res = await ensureChecklistFile(rootUri);
+		await ensureState(rootUri);
+		await syncChecklistAndState(rootUri);
+		await openFile(res.fileUri);
 
 		vscode.window.showInformationMessage(
-			result.existed
-				? 'AIDE checklist already exists. Opened AIDE_CHECKLIST.md.'
-				: 'Created AIDE_CHECKLIST.md.'
+			res.existed
+				? 'AIDE checklist already exists. Synced AIDE_CHECKLIST.md.'
+				: 'Created AIDE_CHECKLIST.md and initialized .aide state.'
 		);
 	});
 
@@ -111,7 +329,54 @@ function activate(context) {
 		}
 	});
 
-	context.subscriptions.push(initCmd, openCmd);
+	const syncCmd = vscode.commands.registerCommand('aide.checklist.sync', async () => {
+		const rootUri = await getWorkspaceRootUri();
+		if (!rootUri) {
+			return;
+		}
+		const r = await syncChecklistAndState(rootUri);
+		vscode.window.showInformationMessage(`AIDE synced checklist (tasks: ${r.tasksFound}).`);
+	});
+
+	const markDoneCmd = vscode.commands.registerCommand('aide.checklist.markDone', async () => {
+		const rootUri = await getWorkspaceRootUri();
+		if (!rootUri) {
+			return;
+		}
+
+		const { state } = await ensureState(rootUri);
+		const taskIds = Object.keys(state.tasks || {}).sort();
+		if (taskIds.length === 0) {
+			vscode.window.showWarningMessage('AIDE: No tasks found. Run "AIDE: Sync Checklist" first.');
+			return;
+		}
+
+		const pick = await vscode.window.showQuickPick(taskIds.map(id => {
+			const t = state.tasks[id];
+			const label = `${id} ${t.status === 'done' ? '(done)' : '(todo)'}`;
+			return { label, id };
+		}), { placeHolder: 'Select a task to mark done' });
+
+		if (!pick) {
+			return;
+		}
+
+		const note = await vscode.window.showInputBox({ prompt: 'Optional note/evidence (stored in .aide/state.json)', value: '' });
+		await markTaskDone(rootUri, pick.id, note || '');
+		vscode.window.showInformationMessage(`AIDE marked ${pick.id} as done.`);
+	});
+
+	const snapshotCmd = vscode.commands.registerCommand('aide.checklist.snapshot', async () => {
+		const rootUri = await getWorkspaceRootUri();
+		if (!rootUri) {
+			return;
+		}
+		const snapUri = await captureSnapshot(rootUri);
+		await openFile(snapUri);
+		vscode.window.showInformationMessage('AIDE snapshot captured.');
+	});
+
+	context.subscriptions.push(initCmd, openCmd, syncCmd, markDoneCmd, snapshotCmd);
 }
 
 function deactivate() {}
