@@ -169,16 +169,16 @@ export class ComputeAutomaticInstructions {
 	}
 
 	private async _addAgentInstructions(variables: ChatRequestVariableSet, telemetryEvent: InstructionsCollectionEvent, token: CancellationToken): Promise<void> {
-		const useCopilotInstructionsFiles = this._configurationService.getValue(PromptsConfig.USE_COPILOT_INSTRUCTION_FILES);
+		const useAideInstructionFiles = this._configurationService.getValue(PromptsConfig.USE_COPILOT_INSTRUCTION_FILES);
 		const useAgentMd = this._configurationService.getValue(PromptsConfig.USE_AGENT_MD);
-		if (!useCopilotInstructionsFiles && !useAgentMd) {
+		if (!useAideInstructionFiles && !useAgentMd) {
 			this._logService.trace(`[InstructionsContextComputer] No agent instructions files added (settings disabled).`);
 			return;
 		}
 
 		const entries: ChatRequestVariableSet = new ChatRequestVariableSet();
-		if (useCopilotInstructionsFiles) {
-			const files: URI[] = await this._promptsService.listCopilotInstructionsMDs(token);
+		if (useAideInstructionFiles) {
+			const files: URI[] = await this._promptsService.listAideInstructionsMDs(token);
 			for (const file of files) {
 				entries.add(toPromptFileVariableEntry(file, PromptFileVariableKind.Instruction, localize('instruction.file.reason.copilot', 'Automatically attached as setting {0} is enabled', PromptsConfig.USE_COPILOT_INSTRUCTION_FILES), true));
 				telemetryEvent.agentInstructionsCount++;

@@ -61,7 +61,7 @@ import { IChatRequestViewModel, IChatResponseViewModel, isRequestVM } from '../.
 import { IChatWidgetHistoryService } from '../../common/chatWidgetHistoryService.js';
 import { ChatAgentLocation, ChatConfiguration, ChatModeKind } from '../../common/constants.js';
 import { ILanguageModelChatSelector, ILanguageModelsService } from '../../common/languageModels.js';
-import { CopilotUsageExtensionFeatureId } from '../../common/languageModelStats.js';
+import { AIDEUsageExtensionFeatureId } from '../../common/languageModelStats.js';
 import { ILanguageModelToolsConfirmationService } from '../../common/languageModelToolsConfirmationService.js';
 import { ILanguageModelToolsService } from '../../common/languageModelToolsService.js';
 import { ChatViewId, IChatWidget, IChatWidgetService } from '../chat.js';
@@ -674,7 +674,7 @@ export function registerChatActions() {
 		}
 	});
 
-	const nonEnterpriseCopilotUsers = ContextKeyExpr.and(ChatContextKeys.enabled, ContextKeyExpr.notEquals(`config.${defaultChat.completionsAdvancedSetting}.authProvider`, defaultChat.provider.enterprise.id));
+	const nonEnterpriseAIDEUsers = ContextKeyExpr.and(ChatContextKeys.enabled, ContextKeyExpr.notEquals(`config.${defaultChat.completionsAdvancedSetting}.authProvider`, defaultChat.provider.enterprise.id));
 	registerAction2(class extends Action2 {
 		constructor() {
 			super({
@@ -688,13 +688,13 @@ export function registerChatActions() {
 						ChatContextKeys.Entitlement.planPro,
 						ChatContextKeys.Entitlement.planProPlus
 					),
-					nonEnterpriseCopilotUsers
+					nonEnterpriseAIDEUsers
 				),
 				menu: {
 					id: MenuId.ChatTitleBarMenu,
 					group: 'y_manage',
 					order: 1,
-					when: nonEnterpriseCopilotUsers
+					when: nonEnterpriseAIDEUsers
 				}
 			});
 		}
@@ -705,12 +705,12 @@ export function registerChatActions() {
 		}
 	});
 
-	registerAction2(class ShowExtensionsUsingCopilot extends Action2 {
+	registerAction2(class ShowExtensionsUsingAIDE extends Action2 {
 
 		constructor() {
 			super({
-				id: 'workbench.action.chat.showExtensionsUsingCopilot',
-				title: localize2('showCopilotUsageExtensions', "Show Extensions using Copilot"),
+				id: 'workbench.action.chat.showExtensionsUsingAIDE',
+				title: localize2('showAIDEUsageExtensions', "Show Extensions using AIDE"),
 				f1: true,
 				category: EXTENSIONS_CATEGORY,
 				precondition: ChatContextKeys.enabled
@@ -719,11 +719,11 @@ export function registerChatActions() {
 
 		override async run(accessor: ServicesAccessor): Promise<void> {
 			const extensionsWorkbenchService = accessor.get(IExtensionsWorkbenchService);
-			extensionsWorkbenchService.openSearch(`@feature:${CopilotUsageExtensionFeatureId}`);
+			extensionsWorkbenchService.openSearch(`@feature:${AIDEUsageExtensionFeatureId}`);
 		}
 	});
 
-	registerAction2(class ConfigureCopilotCompletions extends Action2 {
+	registerAction2(class ConfigureAIDECompletions extends Action2 {
 
 		constructor() {
 			super({
@@ -753,7 +753,7 @@ export function registerChatActions() {
 		constructor() {
 			super({
 				id: OPEN_CHAT_QUOTA_EXCEEDED_DIALOG,
-				title: localize('upgradeChat', "Upgrade GitHub Copilot Plan")
+				title: localize('upgradeChat', "Upgrade AIDE Plan")
 			});
 		}
 
@@ -781,18 +781,18 @@ export function registerChatActions() {
 			}
 
 			const free = chatEntitlementService.entitlement === ChatEntitlement.Free;
-			const upgradeToPro = free ? localize('upgradeToPro', "Upgrade to GitHub Copilot Pro (your first 30 days are free) for:\n- Unlimited inline suggestions\n- Unlimited chat messages\n- Access to premium models") : undefined;
+			const upgradeToPro = free ? localize('upgradeToPro', "Upgrade to AIDE Pro (your first 30 days are free) for:\n- Unlimited inline suggestions\n- Unlimited chat messages\n- Access to premium models") : undefined;
 
 			await dialogService.prompt({
 				type: 'none',
-				message: localize('copilotQuotaReached', "GitHub Copilot Quota Reached"),
+				message: localize('copilotQuotaReached', "AIDE Quota Reached"),
 				cancelButton: {
 					label: localize('dismiss', "Dismiss"),
 					run: () => { /* noop */ }
 				},
 				buttons: [
 					{
-						label: free ? localize('upgradePro', "Upgrade to GitHub Copilot Pro") : localize('upgradePlan', "Upgrade GitHub Copilot Plan"),
+						label: free ? localize('upgradePro', "Upgrade to AIDE Pro") : localize('upgradePlan', "Upgrade AIDE Plan"),
 						run: () => {
 							const commandId = 'workbench.action.chat.upgradePlan';
 							telemetryService.publicLog2<WorkbenchActionExecutedEvent, WorkbenchActionExecutedClassification>('workbenchActionExecuted', { id: commandId, from: 'chat-dialog' });
@@ -968,7 +968,7 @@ MenuRegistry.appendMenuItem(MenuId.TitleBar, {
 	order: 1
 });
 
-registerAction2(class ToggleCopilotControl extends ToggleTitleBarConfigAction {
+registerAction2(class ToggleAIDEControl extends ToggleTitleBarConfigAction {
 	constructor() {
 		super(
 			'chat.commandCenter.enabled',
@@ -986,7 +986,7 @@ registerAction2(class ToggleCopilotControl extends ToggleTitleBarConfigAction {
 	}
 });
 
-export class CopilotTitleBarMenuRendering extends Disposable implements IWorkbenchContribution {
+export class AIDETitleBarMenuRendering extends Disposable implements IWorkbenchContribution {
 
 	static readonly ID = 'workbench.contrib.copilotTitleBarMenuRendering';
 
@@ -1024,7 +1024,7 @@ export class CopilotTitleBarMenuRendering extends Disposable implements IWorkben
 					primaryActionIcon = Codicon.chatSparkleError;
 				} else if (chatQuotaExceeded && free) {
 					primaryActionId = OPEN_CHAT_QUOTA_EXCEEDED_DIALOG;
-					primaryActionTitle = localize('chatQuotaExceededButton', "GitHub Copilot Free plan chat messages quota reached. Click for details.");
+					primaryActionTitle = localize('chatQuotaExceededButton', "AIDE Free plan chat messages quota reached. Click for details.");
 					primaryActionIcon = Codicon.chatSparkleWarning;
 				}
 			}

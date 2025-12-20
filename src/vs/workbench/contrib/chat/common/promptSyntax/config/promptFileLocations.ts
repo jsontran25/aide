@@ -28,9 +28,9 @@ export const LEGACY_MODE_FILE_EXTENSION = '.chatmode.md';
 export const AGENT_FILE_EXTENSION = '.agent.md';
 
 /**
- * Copilot custom instructions file name.
+ * AIDE instructions file name.
  */
-export const COPILOT_CUSTOM_INSTRUCTIONS_FILENAME = 'copilot-instructions.md';
+export const COPILOT_CUSTOM_INSTRUCTIONS_FILENAME = 'aide-instructions.md';
 
 
 /**

@@ -105,7 +105,7 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 
 	private getEntryProps(): IStatusbarEntry {
 		let text = '$(copilot)';
-		let ariaLabel = localize('chatStatusAria', "Copilot status");
+		let ariaLabel = localize('chatStatusAria', "AIDE status");
 		let kind: StatusbarEntryKind | undefined;
 
 		if (isNewUser(this.chatEntitlementService)) {
@@ -131,7 +131,7 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 			// Disabled
 			if (this.chatEntitlementService.sentiment.disabled || this.chatEntitlementService.sentiment.untrusted) {
 				text = '$(copilot-unavailable)';
-				ariaLabel = localize('copilotDisabledStatus', "Copilot disabled");
+				ariaLabel = localize('copilotDisabledStatus', "AIDE disabled");
 			}
 
 			// Sessions in progress
@@ -183,7 +183,7 @@ export class ChatStatusBarEntry extends Disposable implements IWorkbenchContribu
 		}
 
 		const baseResult = {
-			name: localize('chatStatus', "Copilot Status"),
+			name: localize('chatStatus', "AIDE Status"),
 			text,
 			ariaLabel,
 			command: ShowTooltipCommand,

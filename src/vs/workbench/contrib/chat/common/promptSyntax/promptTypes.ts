@@ -2,15 +2,17 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import product from '../../../../../platform/product/common/product.js';
+
 
 import { LanguageSelector } from '../../../../../editor/common/languageSelector.js';
 
 /**
  * Documentation link for the reusable prompts feature.
  */
-export const PROMPT_DOCUMENTATION_URL = 'https://aka.ms/vscode-ghcp-prompt-snippets';
-export const INSTRUCTIONS_DOCUMENTATION_URL = 'https://aka.ms/vscode-ghcp-custom-instructions';
-export const AGENT_DOCUMENTATION_URL = 'https://aka.ms/vscode-ghcp-custom-chat-modes'; // todo
+export const PROMPT_DOCUMENTATION_URL = product.documentationUrl ?? '';
+export const INSTRUCTIONS_DOCUMENTATION_URL = product.documentationUrl ?? '';
+export const AGENT_DOCUMENTATION_URL = product.documentationUrl ?? '';
 
 /**
  * Language ID for the reusable prompt syntax.

@@ -6,9 +6,13 @@
   "publisher": "aide",
   "license": "MIT",
   "private": true,
-  "engines": { "vscode": "^1.108.0" },
+  "engines": {
+    "vscode": "^1.108.0"
+  },
   "main": "./src/extension.js",
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
   "activationEvents": [
     "onStartupFinished",
     "onView:aideChat.session"
@@ -24,14 +28,12 @@
         }
       }
     },
-    "viewsContainers": {
-      "activitybar": [
-        { "id": "aideChat", "title": "Chat", "icon": "resources/aide-chat.svg" }
-      ]
-    },
     "views": {
-      "aideChat": [
-        { "id": "aideChat.session", "name": "AIDE" }
+      "workbench.panel.chat": [
+        {
+          "id": "aideChat.session",
+          "name": "AIDE"
+        }
       ]
     },
     "submenus": [
@@ -41,15 +43,46 @@
       }
     ],
     "commands": [
-      { "command": "aide.chat.context.roadmap", "category": "AIDE", "title": "Roadmap" },
-      { "command": "aide.chat.context.checklist", "category": "AIDE", "title": "Checklist" },
-      { "command": "aide.chat.context.todos", "category": "AIDE", "title": "Todos" },
-      { "command": "aide.chat.context.snapshots", "category": "AIDE", "title": "Snapshots" },
-
-      { "command": "aide.chat.sync", "category": "AIDE", "title": "Sync" },
-      { "command": "aide.chat.snapshot", "category": "AIDE", "title": "Snapshot" },
-      { "command": "aide.chat.openChecklist", "category": "AIDE", "title": "Checklist" },
-      { "command": "aide.chat.refresh", "category": "AIDE", "title": "Refresh" }
+      {
+        "command": "aide.chat.context.roadmap",
+        "category": "AIDE",
+        "title": "Roadmap"
+      },
+      {
+        "command": "aide.chat.context.checklist",
+        "category": "AIDE",
+        "title": "Checklist"
+      },
+      {
+        "command": "aide.chat.context.todos",
+        "category": "AIDE",
+        "title": "Todos"
+      },
+      {
+        "command": "aide.chat.context.snapshots",
+        "category": "AIDE",
+        "title": "Snapshots"
+      },
+      {
+        "command": "aide.chat.sync",
+        "category": "AIDE",
+        "title": "Sync"
+      },
+      {
+        "command": "aide.chat.snapshot",
+        "category": "AIDE",
+        "title": "Snapshot"
+      },
+      {
+        "command": "aide.chat.openChecklist",
+        "category": "AIDE",
+        "title": "Checklist"
+      },
+      {
+        "command": "aide.chat.refresh",
+        "category": "AIDE",
+        "title": "Refresh"
+      }
     ],
     "menus": {
       "view/title": [

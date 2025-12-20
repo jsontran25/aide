@@ -56,11 +56,15 @@ export class MockPromptsService implements IPromptsService {
 	getPromptLocationLabel(promptPath: IPromptPath): string { throw new Error('Not implemented'); }
 	findAgentMDsInWorkspace(token: CancellationToken): Promise<URI[]> { throw new Error('Not implemented'); }
 	listAgentMDs(token: CancellationToken): Promise<URI[]> { throw new Error('Not implemented'); }
-	listCopilotInstructionsMDs(token: CancellationToken): Promise<URI[]> { throw new Error('Not implemented'); }
+	listAIDEInstructionsMDs(token: CancellationToken): Promise<URI[]> { throw new Error('Not implemented'); }
 	getAgentFileURIFromModeFile(oldURI: URI): URI | undefined { throw new Error('Not implemented'); }
 	getDisabledPromptFiles(type: PromptsType): ResourceSet { throw new Error('Method not implemented.'); }
 	setDisabledPromptFiles(type: PromptsType, uris: ResourceSet): void { throw new Error('Method not implemented.'); }
 	registerCustomAgentsProvider(extension: IExtensionDescription, provider: { provideCustomAgents: (options: ICustomAgentQueryOptions, token: CancellationToken) => Promise<IExternalCustomAgent[] | undefined> }): IDisposable { throw new Error('Method not implemented.'); }
 	findAgentSkills(token: CancellationToken): Promise<IAgentSkill[] | undefined> { throw new Error('Method not implemented.'); }
 	dispose(): void { }
+	public async listAideInstructionsMDs(token: CancellationToken): Promise<URI[]> {
+		return [];
+	}
+
 }

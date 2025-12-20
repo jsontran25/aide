@@ -283,7 +283,7 @@ export class PromptFilesLocator {
 		return [];
 	}
 
-	public async findCopilotInstructionsMDsInWorkspace(token: CancellationToken): Promise<URI[]> {
+	public async findAideInstructionsMDsInWorkspace(token: CancellationToken): Promise<URI[]> {
 		const result: URI[] = [];
 		const { folders } = this.workspaceService.getWorkspace();
 		for (const folder of folders) {

@@ -175,7 +175,7 @@ export class PromptsService extends Disposable implements IPromptsService {
 
 	/**
 	 * Registers a CustomAgentsProvider. This will be called by the extension host bridge when
-	 * an extension registers a provider via vscode.chat.registerCustomAgentsProvider().
+	 * an extension registers a provider via registerCustomAgentsProvider().
 	 */
 	public registerCustomAgentsProvider(extension: IExtensionDescription, provider: {
 		onDidChangeCustomAgents?: Event<void>;
@@ -533,12 +533,12 @@ export class PromptsService extends Disposable implements IPromptsService {
 		}
 	}
 
-	public async listCopilotInstructionsMDs(token: CancellationToken): Promise<URI[]> {
-		const useCopilotInstructionsFiles = this.configurationService.getValue(PromptsConfig.USE_COPILOT_INSTRUCTION_FILES);
-		if (!useCopilotInstructionsFiles) {
+	public async listAideInstructionsMDs(token: CancellationToken): Promise<URI[]> {
+		const useAideInstructionFiles = this.configurationService.getValue(PromptsConfig.USE_COPILOT_INSTRUCTION_FILES);
+		if (!useAideInstructionFiles) {
 			return [];
 		}
-		return await this.fileLocator.findCopilotInstructionsMDsInWorkspace(token);
+		return await this.fileLocator.findAideInstructionsMDsInWorkspace(token);
 	}
 
 	public getAgentFileURIFromModeFile(oldURI: URI): URI | undefined {
@@ -668,7 +668,7 @@ export class PromptsService extends Disposable implements IPromptsService {
 				totalSkillsFound: number;
 				claudePersonal: number;
 				claudeWorkspace: number;
-				copilotPersonal: number;
+				aidePersonal: number;
 				githubWorkspace: number;
 				customPersonal: number;
 				customWorkspace: number;
@@ -681,7 +681,7 @@ export class PromptsService extends Disposable implements IPromptsService {
 				totalSkillsFound: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Total number of agent skills found.' };
 				claudePersonal: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of Claude personal skills.' };
 				claudeWorkspace: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of Claude workspace skills.' };
-				copilotPersonal: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of Copilot personal skills.' };
+				aidePersonal: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of AIDE personal skills.' };
 				githubWorkspace: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of GitHub workspace skills.' };
 				customPersonal: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of custom personal skills.' };
 				customWorkspace: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of custom workspace skills.' };
@@ -696,7 +696,7 @@ export class PromptsService extends Disposable implements IPromptsService {
 				totalSkillsFound: result.length,
 				claudePersonal: skillTypes.get('claude-personal') ?? 0,
 				claudeWorkspace: skillTypes.get('claude-workspace') ?? 0,
-				copilotPersonal: skillTypes.get('copilot-personal') ?? 0,
+				aidePersonal: skillTypes.get('copilot-personal') ?? 0,
 				githubWorkspace: skillTypes.get('github-workspace') ?? 0,
 				customPersonal: skillTypes.get('custom-personal') ?? 0,
 				customWorkspace: skillTypes.get('custom-workspace') ?? 0,

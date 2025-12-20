@@ -904,11 +904,11 @@ suite('PromptsService', () => {
 					path: `${rootFolder}/.github/agents/github-agent.agent.md`,
 					contents: [
 						'---',
-						'description: \'GitHub Copilot specialized agent.\'',
+						'description: \'AIDE specialized agent.\'',
 						'target: \'github-copilot\'',
 						'tools: [ github-api, code-search ]',
 						'---',
-						'I am optimized for GitHub Copilot workflows.',
+						'I am optimized for AIDE workflows.',
 					]
 				},
 				{
@@ -937,11 +937,11 @@ suite('PromptsService', () => {
 			const expected: ICustomAgent[] = [
 				{
 					name: 'github-agent',
-					description: 'GitHub Copilot specialized agent.',
+					description: 'AIDE specialized agent.',
 					target: 'github-copilot',
 					tools: ['github-api', 'code-search'],
 					agentInstructions: {
-						content: 'I am optimized for GitHub Copilot workflows.',
+						content: 'I am optimized for AIDE workflows.',
 						toolReferences: [],
 						metadata: undefined
 					},
@@ -1371,10 +1371,10 @@ suite('PromptsService', () => {
 					path: '/home/user/.copilot/skills/copilot-skill-1/SKILL.md',
 					contents: [
 						'---',
-						'name: "Copilot Skill 1"',
-						'description: "A Copilot skill for testing"',
+						'name: "AIDE Skill 1"',
+						'description: "A AIDE skill for testing"',
 						'---',
-						'This is Copilot skill 1 content',
+						'This is AIDE skill 1 content',
 					],
 				},
 			]);
@@ -1407,9 +1407,9 @@ suite('PromptsService', () => {
 			assert.strictEqual(personalSkill1.description, 'A personal skill for testing');
 			assert.strictEqual(personalSkill1.uri.path, '/home/user/.claude/skills/personal-skill-1/SKILL.md');
 
-			const copilotSkill1 = personalSkills.find(skill => skill.name === 'Copilot Skill 1');
-			assert.ok(copilotSkill1, 'Should find Copilot Skill 1');
-			assert.strictEqual(copilotSkill1.description, 'A Copilot skill for testing');
+			const copilotSkill1 = personalSkills.find(skill => skill.name === 'AIDE Skill 1');
+			assert.ok(copilotSkill1, 'Should find AIDE Skill 1');
+			assert.strictEqual(copilotSkill1.description, 'A AIDE skill for testing');
 			assert.strictEqual(copilotSkill1.uri.path, '/home/user/.copilot/skills/copilot-skill-1/SKILL.md');
 		});
 

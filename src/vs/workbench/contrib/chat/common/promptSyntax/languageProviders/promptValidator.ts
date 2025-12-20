@@ -332,7 +332,7 @@ export class PromptValidator {
 
 		switch (attribute.value.type) {
 			case 'array':
-				if (target === Target.GitHubAIDE) {
+				if (target === Target.GitHubCopilot) {
 					// no validation for aide target
 				} else {
 					this.validateVSCodeTools(attribute.value, target, report);
@@ -524,8 +524,12 @@ export const knownGithubAIDETools = [
 	SpecedToolAliases.execute, SpecedToolAliases.read, SpecedToolAliases.edit, SpecedToolAliases.search, SpecedToolAliases.agent,
 ];
 
+// Back-compat alias (keep old export name used across workbench)
+export const knownGithubCopilotTools = knownGithubAIDETools;
+
+
 export function isGithubTarget(promptType: PromptsType, target: string | undefined): boolean {
-	return promptType === PromptsType.agent && target === Target.GitHubAIDE;
+	return promptType === PromptsType.agent && target === Target.GitHubCopilot;
 }
 
 function toMarker(message: string, range: Range, severity = MarkerSeverity.Error): IMarkerData {

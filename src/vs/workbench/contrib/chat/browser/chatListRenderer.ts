@@ -97,7 +97,7 @@ import { ChatCodeBlockContentProvider, CodeBlockPart } from './codeBlockPart.js'
 
 const $ = dom.$;
 
-const COPILOT_USERNAME = 'GitHub Copilot';
+const COPILOT_USERNAME = 'AIDE';
 
 export interface IChatListItemTemplate {
 	currentElement?: ChatTreeItem;

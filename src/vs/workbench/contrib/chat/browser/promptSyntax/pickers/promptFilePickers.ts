@@ -364,7 +364,7 @@ export class PromptFilePickers {
 		if (options.type === PromptsType.instructions) {
 			const useNestedAgentMD = this._configurationService.getValue(PromptsConfig.USE_NESTED_AGENT_MD);
 			const agentInstructionUris = [
-				...await this._promptsService.listCopilotInstructionsMDs(token),
+				...await this._promptsService.listAideInstructionsMDs(token),
 				...await this._promptsService.listAgentMDs(token, !!useNestedAgentMD)
 			];
 			agentInstructionFiles = agentInstructionUris.map(uri => {

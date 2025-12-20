@@ -81,9 +81,18 @@ export namespace GithubPromptHeaderAttributes {
 	export const mcpServers = 'mcp-servers';
 }
 
-export enum Target {
+export const enum Target {
+	/**
+	 * Stable protocol values (do not change): used in prompt headers and persisted data.
+	 */
 	VSCode = 'vscode',
-	GitHubCopilot = 'github-copilot'
+	GitHubCopilot = 'github-copilot',
+
+	/**
+	 * AIDE aliases for branding. Keep values identical to preserve compatibility.
+	 */
+	AIDE = 'vscode',
+	GitHubAIDE = 'github-copilot',
 }
 
 export class PromptHeader {

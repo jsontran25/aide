@@ -154,7 +154,7 @@ suite('ChatModelsViewModel', () => {
 		// Setup test data
 		languageModelsService.addVendor({
 			vendor: 'copilot',
-			displayName: 'GitHub Copilot',
+			displayName: 'AIDE',
 			managementCommand: undefined,
 			when: undefined
 		});
@@ -175,7 +175,7 @@ suite('ChatModelsViewModel', () => {
 			vendor: 'copilot',
 			maxInputTokens: 8192,
 			maxOutputTokens: 4096,
-			modelPickerCategory: { label: 'Copilot', order: 1 },
+			modelPickerCategory: { label: 'AIDE', order: 1 },
 			isUserSelectable: true,
 			capabilities: {
 				toolCalling: true,
@@ -193,7 +193,7 @@ suite('ChatModelsViewModel', () => {
 			vendor: 'copilot',
 			maxInputTokens: 8192,
 			maxOutputTokens: 4096,
-			modelPickerCategory: { label: 'Copilot', order: 1 },
+			modelPickerCategory: { label: 'AIDE', order: 1 },
 			isUserSelectable: true,
 			capabilities: {
 				toolCalling: true,
@@ -400,7 +400,7 @@ suite('ChatModelsViewModel', () => {
 
 		const models = results.filter(r => !isVendorEntry(r) && !isGroupEntry(r)) as IModelItemEntry[];
 		assert.strictEqual(models.length, 2);
-		assert.ok(models.every(m => m.modelEntry.vendorDisplayName === 'GitHub Copilot'));
+		assert.ok(models.every(m => m.modelEntry.vendorDisplayName === 'AIDE'));
 	});
 
 	test('should combine text search with capability filter', () => {
@@ -549,7 +549,7 @@ suite('ChatModelsViewModel', () => {
 		const service = new MockLanguageModelsService();
 		service.addVendor({
 			vendor: 'copilot',
-			displayName: 'GitHub Copilot',
+			displayName: 'AIDE',
 			managementCommand: undefined,
 			when: undefined
 		});
@@ -563,7 +563,7 @@ suite('ChatModelsViewModel', () => {
 			vendor: 'copilot',
 			maxInputTokens: 8192,
 			maxOutputTokens: 4096,
-			modelPickerCategory: { label: 'Copilot', order: 1 },
+			modelPickerCategory: { label: 'AIDE', order: 1 },
 			isUserSelectable: true,
 			capabilities: {
 				toolCalling: true,
@@ -582,7 +582,7 @@ suite('ChatModelsViewModel', () => {
 				vendor: 'copilot',
 				maxInputTokens: 8192,
 				maxOutputTokens: 4096,
-				modelPickerCategory: { label: 'Copilot', order: 1 },
+				modelPickerCategory: { label: 'AIDE', order: 1 },
 				isUserSelectable: true,
 				capabilities: {
 					toolCalling: true,

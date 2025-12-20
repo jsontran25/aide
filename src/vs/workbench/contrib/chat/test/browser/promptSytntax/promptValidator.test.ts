@@ -482,8 +482,8 @@ suite('PromptValidator', () => {
 		test('github-copilot agent with supported attributes', async () => {
 			const content = [
 				'---',
-				'name: "GitHub_Copilot_Custom_Agent"',
-				'description: "GitHub Copilot agent"',
+				'name: "GitHub_AIDE_Custom_Agent"',
+				'description: "AIDE agent"',
 				'target: github-copilot',
 				`tools: ['shell', 'edit', 'search', 'custom-agent']`,
 				'mcp-servers: []',
@@ -498,7 +498,7 @@ suite('PromptValidator', () => {
 			const content = [
 				'---',
 				'name: "GitHubAgent"',
-				'description: "GitHub Copilot agent"',
+				'description: "AIDE agent"',
 				'target: github-copilot',
 				'model: MAE 4.1',
 				`tools: ['shell', 'edit']`,
@@ -512,8 +512,8 @@ suite('PromptValidator', () => {
 			const markers = await validate(content, PromptsType.agent);
 			const messages = markers.map(m => m.message);
 			assert.deepStrictEqual(messages, [
-				'Attribute \'model\' is not supported in custom GitHub Copilot agent files. Supported: description, infer, mcp-servers, name, target, tools.',
-				'Attribute \'handoffs\' is not supported in custom GitHub Copilot agent files. Supported: description, infer, mcp-servers, name, target, tools.',
+				'Attribute \'model\' is not supported in custom AIDE agent files. Supported: description, infer, mcp-servers, name, target, tools.',
+				'Attribute \'handoffs\' is not supported in custom AIDE agent files. Supported: description, infer, mcp-servers, name, target, tools.',
 			], 'Model and handoffs are not validated for github-copilot target');
 		});
 
@@ -521,7 +521,7 @@ suite('PromptValidator', () => {
 			const content = [
 				'---',
 				'name: "GitHubAgent"',
-				'description: "GitHub Copilot agent"',
+				'description: "AIDE agent"',
 				'target: github-copilot',
 				`tools: ['shell', 'edit']`,
 				'---',
@@ -536,7 +536,7 @@ suite('PromptValidator', () => {
 			const content = [
 				'---',
 				'name: "GitHubAgent"',
-				'description: "GitHub Copilot agent"',
+				'description: "AIDE agent"',
 				'target: github-copilot',
 				'argument-hint: "test hint"',
 				`tools: ['shell']`,
@@ -694,7 +694,7 @@ suite('PromptValidator', () => {
 			{
 				const content = [
 					'---',
-					'description: "GitHub Copilot agent"',
+					'description: "AIDE agent"',
 					'target: github-copilot',
 					`tools: ['shell']`,
 					'---',
@@ -709,7 +709,7 @@ suite('PromptValidator', () => {
 				const content = [
 					'---',
 					'name: "GitHubAgent"',
-					'description: "GitHub Copilot agent"',
+					'description: "AIDE agent"',
 					'target: github-copilot',
 					`tools: ['shell']`,
 					'---',
