@@ -37,4 +37,4 @@ export interface IRawChatParticipantContribution {
  * DON'T use this for any new data, only for old persisted data.
  * @deprecated
  */
-export const CHAT_PROVIDER_ID = 'copilot';
+export const CHAT_PROVIDER_ID = 'aide';
