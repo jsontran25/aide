@@ -86,8 +86,5 @@
 	"trustedExtensionAuthAccess": {
 		"github": [],
 		"github-enterprise": []
-	},
-	"aide": {
-		"disableBuiltinChat": true
 	}
 }
