@@ -133,6 +133,15 @@ import { ChatViewsWelcomeHandler } from './viewsWelcome/chatViewsWelcomeHandler.
 import { ChatWidgetService } from './chatWidgetService.js';
 import { ChatWindowNotifier } from './chatWindowNotifier.js';
 
+
+interface IAideProduct {
+	aide?: {
+		disableBuiltinChat?: boolean;
+	};
+}
+
+const disableBuiltinChat = !!(product as unknown as IAideProduct).aide?.disableBuiltinChat;
+
 const toolReferenceNameEnumValues: string[] = [];
 const toolReferenceNameEnumDescriptions: string[] = [];
 
@@ -844,409 +853,411 @@ configurationRegistry.registerConfiguration({
 		}
 	}
 });
-Registry.as<IEditorPaneRegistry>(EditorExtensions.EditorPane).registerEditorPane(
-	EditorPaneDescriptor.create(
-		ChatEditor,
-		ChatEditorInput.EditorID,
-		nls.localize('chat', "Chat")
-	),
-	[
-		new SyncDescriptor(ChatEditorInput)
-	]
-);
-Registry.as<IConfigurationMigrationRegistry>(Extensions.ConfigurationMigration).registerConfigurationMigrations([
-	{
-		key: 'chat.experimental.detectParticipant.enabled',
-		migrateFn: (value, _accessor) => ([
-			['chat.experimental.detectParticipant.enabled', { value: undefined }],
-			['chat.detectParticipant.enabled', { value: value !== false }]
-		])
-	},
-	{
-		key: 'chat.useClaudeSkills',
-		migrateFn: (value, _accessor) => ([
-			['chat.useClaudeSkills', { value: undefined }],
-			['chat.useAgentSkills', { value }]
-		])
-	},
-	{
-		key: mcpDiscoverySection,
-		migrateFn: (value: unknown) => {
-			if (typeof value === 'boolean') {
-				return { value: Object.fromEntries(allDiscoverySources.map(k => [k, value])) };
+if (!disableBuiltinChat) {
+	Registry.as<IEditorPaneRegistry>(EditorExtensions.EditorPane).registerEditorPane(
+		EditorPaneDescriptor.create(
+			ChatEditor,
+			ChatEditorInput.EditorID,
+			nls.localize('chat', "Chat")
+		),
+		[
+			new SyncDescriptor(ChatEditorInput)
+		]
+	);
+	Registry.as<IConfigurationMigrationRegistry>(Extensions.ConfigurationMigration).registerConfigurationMigrations([
+		{
+			key: 'chat.experimental.detectParticipant.enabled',
+			migrateFn: (value, _accessor) => ([
+				['chat.experimental.detectParticipant.enabled', { value: undefined }],
+				['chat.detectParticipant.enabled', { value: value !== false }]
+			])
+		},
+		{
+			key: 'chat.useClaudeSkills',
+			migrateFn: (value, _accessor) => ([
+				['chat.useClaudeSkills', { value: undefined }],
+				['chat.useAgentSkills', { value }]
+			])
+		},
+		{
+			key: mcpDiscoverySection,
+			migrateFn: (value: unknown) => {
+				if (typeof value === 'boolean') {
+					return { value: Object.fromEntries(allDiscoverySources.map(k => [k, value])) };
+				}
+
+				return { value };
 			}
+		},
+	]);
 
-			return { value };
-		}
-	},
-]);
+	class ChatResolverContribution extends Disposable {
 
-class ChatResolverContribution extends Disposable {
+		static readonly ID = 'workbench.contrib.chatResolver';
 
-	static readonly ID = 'workbench.contrib.chatResolver';
+		private readonly _editorRegistrations = this._register(new DisposableMap<string>());
 
-	private readonly _editorRegistrations = this._register(new DisposableMap<string>());
+		constructor(
+			@IChatSessionsService chatSessionsService: IChatSessionsService,
+			@IEditorResolverService private readonly editorResolverService: IEditorResolverService,
+			@IInstantiationService private readonly instantiationService: IInstantiationService,
+		) {
+			super();
 
-	constructor(
-		@IChatSessionsService chatSessionsService: IChatSessionsService,
-		@IEditorResolverService private readonly editorResolverService: IEditorResolverService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService,
-	) {
-		super();
+			this._registerEditor(Schemas.vscodeChatEditor);
+			this._registerEditor(Schemas.vscodeLocalChatSession);
 
-		this._registerEditor(Schemas.vscodeChatEditor);
-		this._registerEditor(Schemas.vscodeLocalChatSession);
+			this._register(chatSessionsService.onDidChangeContentProviderSchemes((e) => {
+				for (const scheme of e.added) {
+					this._registerEditor(scheme);
+				}
+				for (const scheme of e.removed) {
+					this._editorRegistrations.deleteAndDispose(scheme);
+				}
+			}));
 
-		this._register(chatSessionsService.onDidChangeContentProviderSchemes((e) => {
-			for (const scheme of e.added) {
+			for (const scheme of chatSessionsService.getContentProviderSchemes()) {
 				this._registerEditor(scheme);
 			}
-			for (const scheme of e.removed) {
-				this._editorRegistrations.deleteAndDispose(scheme);
-			}
-		}));
-
-		for (const scheme of chatSessionsService.getContentProviderSchemes()) {
-			this._registerEditor(scheme);
 		}
-	}
 
-	private _registerEditor(scheme: string): void {
-		this._editorRegistrations.set(scheme, this.editorResolverService.registerEditor(`${scheme}:**/**`,
-			{
-				id: ChatEditorInput.EditorID,
-				label: nls.localize('chat', "Chat"),
-				priority: RegisteredEditorPriority.builtin
-			},
-			{
-				singlePerResource: true,
-				canSupportResource: resource => resource.scheme === scheme,
-			},
-			{
-				createEditorInput: ({ resource, options }) => {
-					return {
-						editor: this.instantiationService.createInstance(ChatEditorInput, resource, options as IChatEditorOptions),
-						options
-					};
-				}
-			}
-		));
-	}
-}
-
-class ChatAgentSettingContribution extends Disposable implements IWorkbenchContribution {
-
-	static readonly ID = 'workbench.contrib.chatAgentSetting';
-
-	constructor(
-		@IWorkbenchAssignmentService private readonly experimentService: IWorkbenchAssignmentService,
-		@IChatEntitlementService private readonly entitlementService: IChatEntitlementService,
-	) {
-		super();
-		this.registerMaxRequestsSetting();
-	}
-
-
-	private registerMaxRequestsSetting(): void {
-		let lastNode: IConfigurationNode | undefined;
-		const registerMaxRequestsSetting = () => {
-			const treatmentId = this.entitlementService.entitlement === ChatEntitlement.Free ?
-				'chatAgentMaxRequestsFree' :
-				'chatAgentMaxRequestsPro';
-			this.experimentService.getTreatment<number>(treatmentId).then((value) => {
-				const defaultValue = value ?? (this.entitlementService.entitlement === ChatEntitlement.Free ? 25 : 25);
-				const node: IConfigurationNode = {
-					id: 'chatSidebar',
-					title: nls.localize('interactiveSessionConfigurationTitle', "Chat"),
-					type: 'object',
-					properties: {
-						'chat.agent.maxRequests': {
-							type: 'number',
-							markdownDescription: nls.localize('chat.agent.maxRequests', "The maximum number of requests to allow per-turn when using an agent. When the limit is reached, will ask to confirm to continue."),
-							default: defaultValue,
-						},
+		private _registerEditor(scheme: string): void {
+			this._editorRegistrations.set(scheme, this.editorResolverService.registerEditor(`${scheme}:**/**`,
+				{
+					id: ChatEditorInput.EditorID,
+					label: nls.localize('chat', "Chat"),
+					priority: RegisteredEditorPriority.builtin
+				},
+				{
+					singlePerResource: true,
+					canSupportResource: resource => resource.scheme === scheme,
+				},
+				{
+					createEditorInput: ({ resource, options }) => {
+						return {
+							editor: this.instantiationService.createInstance(ChatEditorInput, resource, options as IChatEditorOptions),
+							options
+						};
 					}
-				};
-				configurationRegistry.updateConfigurations({ remove: lastNode ? [lastNode] : [], add: [node] });
-				lastNode = node;
-			});
-		};
-		this._register(Event.runAndSubscribe(Event.debounce(this.entitlementService.onDidChangeEntitlement, () => { }, 1000), () => registerMaxRequestsSetting()));
-	}
-}
-
-
-/**
- * Workbench contribution to register actions for custom chat modes via events
- */
-class ChatAgentActionsContribution extends Disposable implements IWorkbenchContribution {
-
-	static readonly ID = 'workbench.contrib.chatAgentActions';
-
-	private readonly _modeActionDisposables = new DisposableMap<string>();
-
-	constructor(
-		@IChatModeService private readonly chatModeService: IChatModeService,
-	) {
-		super();
-		this._store.add(this._modeActionDisposables);
-
-		// Register actions for existing custom modes
-		const { custom } = this.chatModeService.getModes();
-		for (const mode of custom) {
-			this._registerModeAction(mode);
-		}
-
-		// Listen for custom mode changes by tracking snapshots
-		this._register(this.chatModeService.onDidChangeChatModes(() => {
-			const { custom } = this.chatModeService.getModes();
-			const currentModeIds = new Set<string>();
-			const currentModeNames = new Map<string, string>();
-
-			for (const mode of custom) {
-				const modeName = mode.name.get();
-				if (currentModeNames.has(modeName)) {
-					// If there is a name collision, the later one in the list wins
-					currentModeIds.delete(currentModeNames.get(modeName)!);
 				}
-
-				currentModeNames.set(modeName, mode.id);
-				currentModeIds.add(mode.id);
-			}
-
-			// Remove modes that no longer exist and those replaced by modes later in the list with same name
-			for (const modeId of this._modeActionDisposables.keys()) {
-				if (!currentModeIds.has(modeId)) {
-					this._modeActionDisposables.deleteAndDispose(modeId);
-				}
-			}
-
-			// Register new modes
-			for (const mode of custom) {
-				if (currentModeIds.has(mode.id) && !this._modeActionDisposables.has(mode.id)) {
-					this._registerModeAction(mode);
-				}
-			}
-		}));
-	}
-
-	private _registerModeAction(mode: IChatMode): void {
-		const actionClass = class extends ModeOpenChatGlobalAction {
-			constructor() {
-				super(mode);
-			}
-		};
-		this._modeActionDisposables.set(mode.id, registerAction2(actionClass));
-	}
-}
-
-class ToolReferenceNamesContribution extends Disposable implements IWorkbenchContribution {
-
-	static readonly ID = 'workbench.contrib.toolReferenceNames';
-
-	constructor(
-		@ILanguageModelToolsService private readonly _languageModelToolsService: ILanguageModelToolsService,
-	) {
-		super();
-		this._updateToolReferenceNames();
-		this._register(this._languageModelToolsService.onDidChangeTools(() => this._updateToolReferenceNames()));
-	}
-
-	private _updateToolReferenceNames(): void {
-		const tools =
-			Array.from(this._languageModelToolsService.getTools())
-				.filter((tool): tool is typeof tool & { toolReferenceName: string } => typeof tool.toolReferenceName === 'string')
-				.sort((a, b) => a.toolReferenceName.localeCompare(b.toolReferenceName));
-		toolReferenceNameEnumValues.length = 0;
-		toolReferenceNameEnumDescriptions.length = 0;
-		for (const tool of tools) {
-			toolReferenceNameEnumValues.push(tool.toolReferenceName);
-			toolReferenceNameEnumDescriptions.push(nls.localize(
-				'chat.toolReferenceName.description',
-				"{0} - {1}",
-				tool.toolReferenceName,
-				tool.userDescription || tool.displayName
 			));
 		}
-		configurationRegistry.notifyConfigurationSchemaUpdated({
-			id: 'chatSidebar',
-			properties: {
-				[ChatConfiguration.EligibleForAutoApproval]: {}
-			}
-		});
 	}
-}
 
-AccessibleViewRegistry.register(new ChatTerminalOutputAccessibleView());
-AccessibleViewRegistry.register(new ChatResponseAccessibleView());
-AccessibleViewRegistry.register(new PanelChatAccessibilityHelp());
-AccessibleViewRegistry.register(new QuickChatAccessibilityHelp());
-AccessibleViewRegistry.register(new EditsChatAccessibilityHelp());
-AccessibleViewRegistry.register(new AgentChatAccessibilityHelp());
+	class ChatAgentSettingContribution extends Disposable implements IWorkbenchContribution {
 
-registerEditorFeature(ChatInputBoxContentProvider);
+		static readonly ID = 'workbench.contrib.chatAgentSetting';
 
-class ChatSlashStaticSlashCommandsContribution extends Disposable {
+		constructor(
+			@IWorkbenchAssignmentService private readonly experimentService: IWorkbenchAssignmentService,
+			@IChatEntitlementService private readonly entitlementService: IChatEntitlementService,
+		) {
+			super();
+			this.registerMaxRequestsSetting();
+		}
 
-	static readonly ID = 'workbench.contrib.chatSlashStaticSlashCommands';
 
-	constructor(
-		@IChatSlashCommandService slashCommandService: IChatSlashCommandService,
-		@ICommandService commandService: ICommandService,
-		@IChatAgentService chatAgentService: IChatAgentService,
-		@IChatWidgetService chatWidgetService: IChatWidgetService,
-		@IInstantiationService instantiationService: IInstantiationService,
-	) {
-		super();
-		this._store.add(slashCommandService.registerSlashCommand({
-			command: 'clear',
-			detail: nls.localize('clear', "Start a new chat"),
-			sortText: 'z2_clear',
-			executeImmediately: true,
-			locations: [ChatAgentLocation.Chat]
-		}, async () => {
-			commandService.executeCommand(ACTION_ID_NEW_CHAT);
-		}));
-		this._store.add(slashCommandService.registerSlashCommand({
-			command: 'help',
-			detail: '',
-			sortText: 'z1_help',
-			executeImmediately: true,
-			locations: [ChatAgentLocation.Chat],
-			modes: [ChatModeKind.Ask]
-		}, async (prompt, progress, _history, _location, sessionResource) => {
-			const defaultAgent = chatAgentService.getDefaultAgent(ChatAgentLocation.Chat);
-			const agents = chatAgentService.getAgents();
-
-			// Report prefix
-			if (defaultAgent?.metadata.helpTextPrefix) {
-				if (isMarkdownString(defaultAgent.metadata.helpTextPrefix)) {
-					progress.report({ content: defaultAgent.metadata.helpTextPrefix, kind: 'markdownContent' });
-				} else {
-					progress.report({ content: new MarkdownString(defaultAgent.metadata.helpTextPrefix), kind: 'markdownContent' });
-				}
-				progress.report({ content: new MarkdownString('\n\n'), kind: 'markdownContent' });
-			}
-
-			// Report agent list
-			const agentText = (await Promise.all(agents
-				.filter(a => !a.isDefault && !a.isCore)
-				.filter(a => a.locations.includes(ChatAgentLocation.Chat))
-				.map(async a => {
-					const description = a.description ? `- ${a.description}` : '';
-					const agentMarkdown = instantiationService.invokeFunction(accessor => agentToMarkdown(a, sessionResource, true, accessor));
-					const agentLine = `- ${agentMarkdown} ${description}`;
-					const commandText = a.slashCommands.map(c => {
-						const description = c.description ? `- ${c.description}` : '';
-						return `\t* ${agentSlashCommandToMarkdown(a, c, sessionResource)} ${description}`;
-					}).join('\n');
-
-					return (agentLine + '\n' + commandText).trim();
-				}))).join('\n');
-			progress.report({ content: new MarkdownString(agentText, { isTrusted: { enabledCommands: [ChatSubmitAction.ID] } }), kind: 'markdownContent' });
-
-			// Report help text ending
-			if (defaultAgent?.metadata.helpTextPostfix) {
-				progress.report({ content: new MarkdownString('\n\n'), kind: 'markdownContent' });
-				if (isMarkdownString(defaultAgent.metadata.helpTextPostfix)) {
-					progress.report({ content: defaultAgent.metadata.helpTextPostfix, kind: 'markdownContent' });
-				} else {
-					progress.report({ content: new MarkdownString(defaultAgent.metadata.helpTextPostfix), kind: 'markdownContent' });
-				}
-			}
-
-			// Without this, the response will be done before it renders and so it will not stream. This ensures that if the response starts
-			// rendering during the next 200ms, then it will be streamed. Once it starts streaming, the whole response streams even after
-			// it has received all response data has been received.
-			await timeout(200);
-		}));
+		private registerMaxRequestsSetting(): void {
+			let lastNode: IConfigurationNode | undefined;
+			const registerMaxRequestsSetting = () => {
+				const treatmentId = this.entitlementService.entitlement === ChatEntitlement.Free ?
+					'chatAgentMaxRequestsFree' :
+					'chatAgentMaxRequestsPro';
+				this.experimentService.getTreatment<number>(treatmentId).then((value) => {
+					const defaultValue = value ?? (this.entitlementService.entitlement === ChatEntitlement.Free ? 25 : 25);
+					const node: IConfigurationNode = {
+						id: 'chatSidebar',
+						title: nls.localize('interactiveSessionConfigurationTitle', "Chat"),
+						type: 'object',
+						properties: {
+							'chat.agent.maxRequests': {
+								type: 'number',
+								markdownDescription: nls.localize('chat.agent.maxRequests', "The maximum number of requests to allow per-turn when using an agent. When the limit is reached, will ask to confirm to continue."),
+								default: defaultValue,
+							},
+						}
+					};
+					configurationRegistry.updateConfigurations({ remove: lastNode ? [lastNode] : [], add: [node] });
+					lastNode = node;
+				});
+			};
+			this._register(Event.runAndSubscribe(Event.debounce(this.entitlementService.onDidChangeEntitlement, () => { }, 1000), () => registerMaxRequestsSetting()));
+		}
 	}
+
+
+	/**
+	 * Workbench contribution to register actions for custom chat modes via events
+	 */
+	class ChatAgentActionsContribution extends Disposable implements IWorkbenchContribution {
+
+		static readonly ID = 'workbench.contrib.chatAgentActions';
+
+		private readonly _modeActionDisposables = new DisposableMap<string>();
+
+		constructor(
+			@IChatModeService private readonly chatModeService: IChatModeService,
+		) {
+			super();
+			this._store.add(this._modeActionDisposables);
+
+			// Register actions for existing custom modes
+			const { custom } = this.chatModeService.getModes();
+			for (const mode of custom) {
+				this._registerModeAction(mode);
+			}
+
+			// Listen for custom mode changes by tracking snapshots
+			this._register(this.chatModeService.onDidChangeChatModes(() => {
+				const { custom } = this.chatModeService.getModes();
+				const currentModeIds = new Set<string>();
+				const currentModeNames = new Map<string, string>();
+
+				for (const mode of custom) {
+					const modeName = mode.name.get();
+					if (currentModeNames.has(modeName)) {
+						// If there is a name collision, the later one in the list wins
+						currentModeIds.delete(currentModeNames.get(modeName)!);
+					}
+
+					currentModeNames.set(modeName, mode.id);
+					currentModeIds.add(mode.id);
+				}
+
+				// Remove modes that no longer exist and those replaced by modes later in the list with same name
+				for (const modeId of this._modeActionDisposables.keys()) {
+					if (!currentModeIds.has(modeId)) {
+						this._modeActionDisposables.deleteAndDispose(modeId);
+					}
+				}
+
+				// Register new modes
+				for (const mode of custom) {
+					if (currentModeIds.has(mode.id) && !this._modeActionDisposables.has(mode.id)) {
+						this._registerModeAction(mode);
+					}
+				}
+			}));
+		}
+
+		private _registerModeAction(mode: IChatMode): void {
+			const actionClass = class extends ModeOpenChatGlobalAction {
+				constructor() {
+					super(mode);
+				}
+			};
+			this._modeActionDisposables.set(mode.id, registerAction2(actionClass));
+		}
+	}
+
+	class ToolReferenceNamesContribution extends Disposable implements IWorkbenchContribution {
+
+		static readonly ID = 'workbench.contrib.toolReferenceNames';
+
+		constructor(
+			@ILanguageModelToolsService private readonly _languageModelToolsService: ILanguageModelToolsService,
+		) {
+			super();
+			this._updateToolReferenceNames();
+			this._register(this._languageModelToolsService.onDidChangeTools(() => this._updateToolReferenceNames()));
+		}
+
+		private _updateToolReferenceNames(): void {
+			const tools =
+				Array.from(this._languageModelToolsService.getTools())
+					.filter((tool): tool is typeof tool & { toolReferenceName: string } => typeof tool.toolReferenceName === 'string')
+					.sort((a, b) => a.toolReferenceName.localeCompare(b.toolReferenceName));
+			toolReferenceNameEnumValues.length = 0;
+			toolReferenceNameEnumDescriptions.length = 0;
+			for (const tool of tools) {
+				toolReferenceNameEnumValues.push(tool.toolReferenceName);
+				toolReferenceNameEnumDescriptions.push(nls.localize(
+					'chat.toolReferenceName.description',
+					"{0} - {1}",
+					tool.toolReferenceName,
+					tool.userDescription || tool.displayName
+				));
+			}
+			configurationRegistry.notifyConfigurationSchemaUpdated({
+				id: 'chatSidebar',
+				properties: {
+					[ChatConfiguration.EligibleForAutoApproval]: {}
+				}
+			});
+		}
+	}
+
+	AccessibleViewRegistry.register(new ChatTerminalOutputAccessibleView());
+	AccessibleViewRegistry.register(new ChatResponseAccessibleView());
+	AccessibleViewRegistry.register(new PanelChatAccessibilityHelp());
+	AccessibleViewRegistry.register(new QuickChatAccessibilityHelp());
+	AccessibleViewRegistry.register(new EditsChatAccessibilityHelp());
+	AccessibleViewRegistry.register(new AgentChatAccessibilityHelp());
+
+	registerEditorFeature(ChatInputBoxContentProvider);
+
+	class ChatSlashStaticSlashCommandsContribution extends Disposable {
+
+		static readonly ID = 'workbench.contrib.chatSlashStaticSlashCommands';
+
+		constructor(
+			@IChatSlashCommandService slashCommandService: IChatSlashCommandService,
+			@ICommandService commandService: ICommandService,
+			@IChatAgentService chatAgentService: IChatAgentService,
+			@IChatWidgetService chatWidgetService: IChatWidgetService,
+			@IInstantiationService instantiationService: IInstantiationService,
+		) {
+			super();
+			this._store.add(slashCommandService.registerSlashCommand({
+				command: 'clear',
+				detail: nls.localize('clear', "Start a new chat"),
+				sortText: 'z2_clear',
+				executeImmediately: true,
+				locations: [ChatAgentLocation.Chat]
+			}, async () => {
+				commandService.executeCommand(ACTION_ID_NEW_CHAT);
+			}));
+			this._store.add(slashCommandService.registerSlashCommand({
+				command: 'help',
+				detail: '',
+				sortText: 'z1_help',
+				executeImmediately: true,
+				locations: [ChatAgentLocation.Chat],
+				modes: [ChatModeKind.Ask]
+			}, async (prompt, progress, _history, _location, sessionResource) => {
+				const defaultAgent = chatAgentService.getDefaultAgent(ChatAgentLocation.Chat);
+				const agents = chatAgentService.getAgents();
+
+				// Report prefix
+				if (defaultAgent?.metadata.helpTextPrefix) {
+					if (isMarkdownString(defaultAgent.metadata.helpTextPrefix)) {
+						progress.report({ content: defaultAgent.metadata.helpTextPrefix, kind: 'markdownContent' });
+					} else {
+						progress.report({ content: new MarkdownString(defaultAgent.metadata.helpTextPrefix), kind: 'markdownContent' });
+					}
+					progress.report({ content: new MarkdownString('\n\n'), kind: 'markdownContent' });
+				}
+
+				// Report agent list
+				const agentText = (await Promise.all(agents
+					.filter(a => !a.isDefault && !a.isCore)
+					.filter(a => a.locations.includes(ChatAgentLocation.Chat))
+					.map(async a => {
+						const description = a.description ? `- ${a.description}` : '';
+						const agentMarkdown = instantiationService.invokeFunction(accessor => agentToMarkdown(a, sessionResource, true, accessor));
+						const agentLine = `- ${agentMarkdown} ${description}`;
+						const commandText = a.slashCommands.map(c => {
+							const description = c.description ? `- ${c.description}` : '';
+							return `\t* ${agentSlashCommandToMarkdown(a, c, sessionResource)} ${description}`;
+						}).join('\n');
+
+						return (agentLine + '\n' + commandText).trim();
+					}))).join('\n');
+				progress.report({ content: new MarkdownString(agentText, { isTrusted: { enabledCommands: [ChatSubmitAction.ID] } }), kind: 'markdownContent' });
+
+				// Report help text ending
+				if (defaultAgent?.metadata.helpTextPostfix) {
+					progress.report({ content: new MarkdownString('\n\n'), kind: 'markdownContent' });
+					if (isMarkdownString(defaultAgent.metadata.helpTextPostfix)) {
+						progress.report({ content: defaultAgent.metadata.helpTextPostfix, kind: 'markdownContent' });
+					} else {
+						progress.report({ content: new MarkdownString(defaultAgent.metadata.helpTextPostfix), kind: 'markdownContent' });
+					}
+				}
+
+				// Without this, the response will be done before it renders and so it will not stream. This ensures that if the response starts
+				// rendering during the next 200ms, then it will be streamed. Once it starts streaming, the whole response streams even after
+				// it has received all response data has been received.
+				await timeout(200);
+			}));
+		}
+	}
+	Registry.as<IEditorFactoryRegistry>(EditorExtensions.EditorFactory).registerEditorSerializer(ChatEditorInput.TypeID, ChatEditorInputSerializer);
+
+	registerWorkbenchContribution2(ChatResolverContribution.ID, ChatResolverContribution, WorkbenchPhase.BlockStartup);
+	registerWorkbenchContribution2(ChatSlashStaticSlashCommandsContribution.ID, ChatSlashStaticSlashCommandsContribution, WorkbenchPhase.Eventually);
+	registerWorkbenchContribution2(ChatExtensionPointHandler.ID, ChatExtensionPointHandler, WorkbenchPhase.BlockStartup);
+	registerWorkbenchContribution2(LanguageModelToolsExtensionPointHandler.ID, LanguageModelToolsExtensionPointHandler, WorkbenchPhase.BlockRestore);
+	registerWorkbenchContribution2(ChatPromptFilesExtensionPointHandler.ID, ChatPromptFilesExtensionPointHandler, WorkbenchPhase.BlockRestore);
+	registerWorkbenchContribution2(ChatCompatibilityNotifier.ID, ChatCompatibilityNotifier, WorkbenchPhase.Eventually);
+	registerWorkbenchContribution2(CopilotTitleBarMenuRendering.ID, CopilotTitleBarMenuRendering, WorkbenchPhase.BlockRestore);
+	registerWorkbenchContribution2(CodeBlockActionRendering.ID, CodeBlockActionRendering, WorkbenchPhase.BlockRestore);
+	registerWorkbenchContribution2(ContinueChatInSessionActionRendering.ID, ContinueChatInSessionActionRendering, WorkbenchPhase.BlockRestore);
+	registerWorkbenchContribution2(ChatImplicitContextContribution.ID, ChatImplicitContextContribution, WorkbenchPhase.Eventually);
+	registerWorkbenchContribution2(ChatRelatedFilesContribution.ID, ChatRelatedFilesContribution, WorkbenchPhase.Eventually);
+	registerWorkbenchContribution2(ChatViewsWelcomeHandler.ID, ChatViewsWelcomeHandler, WorkbenchPhase.BlockStartup);
+	registerWorkbenchContribution2(ChatGettingStartedContribution.ID, ChatGettingStartedContribution, WorkbenchPhase.Eventually);
+	registerWorkbenchContribution2(ChatSetupContribution.ID, ChatSetupContribution, WorkbenchPhase.BlockRestore);
+	registerWorkbenchContribution2(ChatTeardownContribution.ID, ChatTeardownContribution, WorkbenchPhase.AfterRestored);
+	registerWorkbenchContribution2(ChatStatusBarEntry.ID, ChatStatusBarEntry, WorkbenchPhase.BlockRestore);
+	registerWorkbenchContribution2(BuiltinToolsContribution.ID, BuiltinToolsContribution, WorkbenchPhase.Eventually);
+	registerWorkbenchContribution2(ChatAgentSettingContribution.ID, ChatAgentSettingContribution, WorkbenchPhase.AfterRestored);
+	registerWorkbenchContribution2(ChatAgentActionsContribution.ID, ChatAgentActionsContribution, WorkbenchPhase.Eventually);
+	registerWorkbenchContribution2(ToolReferenceNamesContribution.ID, ToolReferenceNamesContribution, WorkbenchPhase.AfterRestored);
+	registerWorkbenchContribution2(ChatAgentRecommendation.ID, ChatAgentRecommendation, WorkbenchPhase.Eventually);
+	registerWorkbenchContribution2(ChatEditingEditorAccessibility.ID, ChatEditingEditorAccessibility, WorkbenchPhase.AfterRestored);
+	registerWorkbenchContribution2(ChatEditingEditorOverlay.ID, ChatEditingEditorOverlay, WorkbenchPhase.AfterRestored);
+	registerWorkbenchContribution2(SimpleBrowserOverlay.ID, SimpleBrowserOverlay, WorkbenchPhase.AfterRestored);
+	registerWorkbenchContribution2(ChatEditingEditorContextKeys.ID, ChatEditingEditorContextKeys, WorkbenchPhase.AfterRestored);
+	registerWorkbenchContribution2(ChatTransferContribution.ID, ChatTransferContribution, WorkbenchPhase.BlockRestore);
+	registerWorkbenchContribution2(ChatContextContributions.ID, ChatContextContributions, WorkbenchPhase.AfterRestored);
+	registerWorkbenchContribution2(ChatResponseResourceFileSystemProvider.ID, ChatResponseResourceFileSystemProvider, WorkbenchPhase.AfterRestored);
+	registerWorkbenchContribution2(PromptUrlHandler.ID, PromptUrlHandler, WorkbenchPhase.BlockRestore);
+	registerWorkbenchContribution2(ChatEditingNotebookFileSystemProviderContrib.ID, ChatEditingNotebookFileSystemProviderContrib, WorkbenchPhase.BlockStartup);
+	registerWorkbenchContribution2(UserToolSetsContributions.ID, UserToolSetsContributions, WorkbenchPhase.Eventually);
+	registerWorkbenchContribution2(PromptLanguageFeaturesProvider.ID, PromptLanguageFeaturesProvider, WorkbenchPhase.Eventually);
+	registerWorkbenchContribution2(ChatWindowNotifier.ID, ChatWindowNotifier, WorkbenchPhase.AfterRestored);
+
+	registerChatActions();
+	registerChatAccessibilityActions();
+	registerChatCopyActions();
+	registerChatCodeBlockActions();
+	registerChatCodeCompareBlockActions();
+	registerChatFileTreeActions();
+	registerChatPromptNavigationActions();
+	registerChatTitleActions();
+	registerChatExecuteActions();
+	registerQuickChatActions();
+	registerChatExportActions();
+	registerMoveActions();
+	registerNewChatActions();
+	registerChatContextActions();
+	registerChatDeveloperActions();
+	registerChatEditorActions();
+	registerChatElicitationActions();
+	registerChatToolActions();
+	registerLanguageModelActions();
+	registerAction2(ConfigureToolSets);
+	registerEditorFeature(ChatPasteProvidersFeature);
+
+
+	registerSingleton(IChatTransferService, ChatTransferService, InstantiationType.Delayed);
+	registerSingleton(IChatService, ChatService, InstantiationType.Delayed);
+	registerSingleton(IChatWidgetService, ChatWidgetService, InstantiationType.Delayed);
+	registerSingleton(IQuickChatService, QuickChatService, InstantiationType.Delayed);
+	registerSingleton(IChatAccessibilityService, ChatAccessibilityService, InstantiationType.Delayed);
+	registerSingleton(IChatWidgetHistoryService, ChatWidgetHistoryService, InstantiationType.Delayed);
+	registerSingleton(ILanguageModelsService, LanguageModelsService, InstantiationType.Delayed);
+	registerSingleton(ILanguageModelStatsService, LanguageModelStatsService, InstantiationType.Delayed);
+	registerSingleton(IChatSlashCommandService, ChatSlashCommandService, InstantiationType.Delayed);
+	registerSingleton(IChatAgentService, ChatAgentService, InstantiationType.Delayed);
+	registerSingleton(IChatAgentNameService, ChatAgentNameService, InstantiationType.Delayed);
+	registerSingleton(IChatVariablesService, ChatVariablesService, InstantiationType.Delayed);
+	registerSingleton(ILanguageModelToolsService, LanguageModelToolsService, InstantiationType.Delayed);
+	registerSingleton(ILanguageModelToolsConfirmationService, LanguageModelToolsConfirmationService, InstantiationType.Delayed);
+	registerSingleton(IVoiceChatService, VoiceChatService, InstantiationType.Delayed);
+	registerSingleton(IChatCodeBlockContextProviderService, ChatCodeBlockContextProviderService, InstantiationType.Delayed);
+	registerSingleton(ICodeMapperService, CodeMapperService, InstantiationType.Delayed);
+	registerSingleton(IChatEditingService, ChatEditingService, InstantiationType.Delayed);
+	registerSingleton(IChatMarkdownAnchorService, ChatMarkdownAnchorService, InstantiationType.Delayed);
+	registerSingleton(ILanguageModelIgnoredFilesService, LanguageModelIgnoredFilesService, InstantiationType.Delayed);
+	registerSingleton(IPromptsService, PromptsService, InstantiationType.Delayed);
+	registerSingleton(IChatContextPickService, ChatContextPickService, InstantiationType.Delayed);
+	registerSingleton(IChatModeService, ChatModeService, InstantiationType.Delayed);
+	registerSingleton(IChatAttachmentResolveService, ChatAttachmentResolveService, InstantiationType.Delayed);
+	registerSingleton(IChatTodoListService, ChatTodoListService, InstantiationType.Delayed);
+	registerSingleton(IChatOutputRendererService, ChatOutputRendererService, InstantiationType.Delayed);
+	registerSingleton(IChatLayoutService, ChatLayoutService, InstantiationType.Delayed);
+
+	ChatWidget.CONTRIBS.push(ChatDynamicVariableModel);
 }
-Registry.as<IEditorFactoryRegistry>(EditorExtensions.EditorFactory).registerEditorSerializer(ChatEditorInput.TypeID, ChatEditorInputSerializer);
-
-registerWorkbenchContribution2(ChatResolverContribution.ID, ChatResolverContribution, WorkbenchPhase.BlockStartup);
-registerWorkbenchContribution2(ChatSlashStaticSlashCommandsContribution.ID, ChatSlashStaticSlashCommandsContribution, WorkbenchPhase.Eventually);
-registerWorkbenchContribution2(ChatExtensionPointHandler.ID, ChatExtensionPointHandler, WorkbenchPhase.BlockStartup);
-registerWorkbenchContribution2(LanguageModelToolsExtensionPointHandler.ID, LanguageModelToolsExtensionPointHandler, WorkbenchPhase.BlockRestore);
-registerWorkbenchContribution2(ChatPromptFilesExtensionPointHandler.ID, ChatPromptFilesExtensionPointHandler, WorkbenchPhase.BlockRestore);
-registerWorkbenchContribution2(ChatCompatibilityNotifier.ID, ChatCompatibilityNotifier, WorkbenchPhase.Eventually);
-registerWorkbenchContribution2(CopilotTitleBarMenuRendering.ID, CopilotTitleBarMenuRendering, WorkbenchPhase.BlockRestore);
-registerWorkbenchContribution2(CodeBlockActionRendering.ID, CodeBlockActionRendering, WorkbenchPhase.BlockRestore);
-registerWorkbenchContribution2(ContinueChatInSessionActionRendering.ID, ContinueChatInSessionActionRendering, WorkbenchPhase.BlockRestore);
-registerWorkbenchContribution2(ChatImplicitContextContribution.ID, ChatImplicitContextContribution, WorkbenchPhase.Eventually);
-registerWorkbenchContribution2(ChatRelatedFilesContribution.ID, ChatRelatedFilesContribution, WorkbenchPhase.Eventually);
-registerWorkbenchContribution2(ChatViewsWelcomeHandler.ID, ChatViewsWelcomeHandler, WorkbenchPhase.BlockStartup);
-registerWorkbenchContribution2(ChatGettingStartedContribution.ID, ChatGettingStartedContribution, WorkbenchPhase.Eventually);
-registerWorkbenchContribution2(ChatSetupContribution.ID, ChatSetupContribution, WorkbenchPhase.BlockRestore);
-registerWorkbenchContribution2(ChatTeardownContribution.ID, ChatTeardownContribution, WorkbenchPhase.AfterRestored);
-registerWorkbenchContribution2(ChatStatusBarEntry.ID, ChatStatusBarEntry, WorkbenchPhase.BlockRestore);
-registerWorkbenchContribution2(BuiltinToolsContribution.ID, BuiltinToolsContribution, WorkbenchPhase.Eventually);
-registerWorkbenchContribution2(ChatAgentSettingContribution.ID, ChatAgentSettingContribution, WorkbenchPhase.AfterRestored);
-registerWorkbenchContribution2(ChatAgentActionsContribution.ID, ChatAgentActionsContribution, WorkbenchPhase.Eventually);
-registerWorkbenchContribution2(ToolReferenceNamesContribution.ID, ToolReferenceNamesContribution, WorkbenchPhase.AfterRestored);
-registerWorkbenchContribution2(ChatAgentRecommendation.ID, ChatAgentRecommendation, WorkbenchPhase.Eventually);
-registerWorkbenchContribution2(ChatEditingEditorAccessibility.ID, ChatEditingEditorAccessibility, WorkbenchPhase.AfterRestored);
-registerWorkbenchContribution2(ChatEditingEditorOverlay.ID, ChatEditingEditorOverlay, WorkbenchPhase.AfterRestored);
-registerWorkbenchContribution2(SimpleBrowserOverlay.ID, SimpleBrowserOverlay, WorkbenchPhase.AfterRestored);
-registerWorkbenchContribution2(ChatEditingEditorContextKeys.ID, ChatEditingEditorContextKeys, WorkbenchPhase.AfterRestored);
-registerWorkbenchContribution2(ChatTransferContribution.ID, ChatTransferContribution, WorkbenchPhase.BlockRestore);
-registerWorkbenchContribution2(ChatContextContributions.ID, ChatContextContributions, WorkbenchPhase.AfterRestored);
-registerWorkbenchContribution2(ChatResponseResourceFileSystemProvider.ID, ChatResponseResourceFileSystemProvider, WorkbenchPhase.AfterRestored);
-registerWorkbenchContribution2(PromptUrlHandler.ID, PromptUrlHandler, WorkbenchPhase.BlockRestore);
-registerWorkbenchContribution2(ChatEditingNotebookFileSystemProviderContrib.ID, ChatEditingNotebookFileSystemProviderContrib, WorkbenchPhase.BlockStartup);
-registerWorkbenchContribution2(UserToolSetsContributions.ID, UserToolSetsContributions, WorkbenchPhase.Eventually);
-registerWorkbenchContribution2(PromptLanguageFeaturesProvider.ID, PromptLanguageFeaturesProvider, WorkbenchPhase.Eventually);
-registerWorkbenchContribution2(ChatWindowNotifier.ID, ChatWindowNotifier, WorkbenchPhase.AfterRestored);
-
-registerChatActions();
-registerChatAccessibilityActions();
-registerChatCopyActions();
-registerChatCodeBlockActions();
-registerChatCodeCompareBlockActions();
-registerChatFileTreeActions();
-registerChatPromptNavigationActions();
-registerChatTitleActions();
-registerChatExecuteActions();
-registerQuickChatActions();
-registerChatExportActions();
-registerMoveActions();
-registerNewChatActions();
-registerChatContextActions();
-registerChatDeveloperActions();
-registerChatEditorActions();
-registerChatElicitationActions();
-registerChatToolActions();
-registerLanguageModelActions();
-registerAction2(ConfigureToolSets);
-registerEditorFeature(ChatPasteProvidersFeature);
-
-
-registerSingleton(IChatTransferService, ChatTransferService, InstantiationType.Delayed);
-registerSingleton(IChatService, ChatService, InstantiationType.Delayed);
-registerSingleton(IChatWidgetService, ChatWidgetService, InstantiationType.Delayed);
-registerSingleton(IQuickChatService, QuickChatService, InstantiationType.Delayed);
-registerSingleton(IChatAccessibilityService, ChatAccessibilityService, InstantiationType.Delayed);
-registerSingleton(IChatWidgetHistoryService, ChatWidgetHistoryService, InstantiationType.Delayed);
-registerSingleton(ILanguageModelsService, LanguageModelsService, InstantiationType.Delayed);
-registerSingleton(ILanguageModelStatsService, LanguageModelStatsService, InstantiationType.Delayed);
-registerSingleton(IChatSlashCommandService, ChatSlashCommandService, InstantiationType.Delayed);
-registerSingleton(IChatAgentService, ChatAgentService, InstantiationType.Delayed);
-registerSingleton(IChatAgentNameService, ChatAgentNameService, InstantiationType.Delayed);
-registerSingleton(IChatVariablesService, ChatVariablesService, InstantiationType.Delayed);
-registerSingleton(ILanguageModelToolsService, LanguageModelToolsService, InstantiationType.Delayed);
-registerSingleton(ILanguageModelToolsConfirmationService, LanguageModelToolsConfirmationService, InstantiationType.Delayed);
-registerSingleton(IVoiceChatService, VoiceChatService, InstantiationType.Delayed);
-registerSingleton(IChatCodeBlockContextProviderService, ChatCodeBlockContextProviderService, InstantiationType.Delayed);
-registerSingleton(ICodeMapperService, CodeMapperService, InstantiationType.Delayed);
-registerSingleton(IChatEditingService, ChatEditingService, InstantiationType.Delayed);
-registerSingleton(IChatMarkdownAnchorService, ChatMarkdownAnchorService, InstantiationType.Delayed);
-registerSingleton(ILanguageModelIgnoredFilesService, LanguageModelIgnoredFilesService, InstantiationType.Delayed);
-registerSingleton(IPromptsService, PromptsService, InstantiationType.Delayed);
-registerSingleton(IChatContextPickService, ChatContextPickService, InstantiationType.Delayed);
-registerSingleton(IChatModeService, ChatModeService, InstantiationType.Delayed);
-registerSingleton(IChatAttachmentResolveService, ChatAttachmentResolveService, InstantiationType.Delayed);
-registerSingleton(IChatTodoListService, ChatTodoListService, InstantiationType.Delayed);
-registerSingleton(IChatOutputRendererService, ChatOutputRendererService, InstantiationType.Delayed);
-registerSingleton(IChatLayoutService, ChatLayoutService, InstantiationType.Delayed);
-
-ChatWidget.CONTRIBS.push(ChatDynamicVariableModel);

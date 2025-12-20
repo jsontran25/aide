@@ -1,8 +1,8 @@
 {
   "name": "aide-chat",
   "displayName": "AIDE Chat",
-  "description": "AIDE chat surface (UI only).",
-  "version": "0.3.0",
+  "description": "AIDE chat surface (runs inside the built-in Chat container).",
+  "version": "0.4.0",
   "publisher": "aide",
   "license": "MIT",
   "private": true,
@@ -11,26 +11,21 @@
   "categories": ["Other"],
   "activationEvents": [
     "onStartupFinished",
-    "onView:aideChat.session"
+    "onView:aideChat.session",
+
+    "onCommand:aide.chat.sync",
+    "onCommand:aide.chat.snapshot",
+    "onCommand:aide.chat.openChecklist",
+    "onCommand:aide.chat.refresh",
+
+    "onCommand:aide.chat.context.roadmap",
+    "onCommand:aide.chat.context.checklist",
+    "onCommand:aide.chat.context.todos",
+    "onCommand:aide.chat.context.snapshots"
   ],
   "contributes": {
-    "configuration": {
-      "title": "AIDE",
-      "properties": {
-        "aide.chat.defaultRightSide": {
-          "type": "boolean",
-          "default": true,
-          "description": "Try to place AIDE Chat in the secondary side bar on first run."
-        }
-      }
-    },
-    "viewsContainers": {
-      "activitybar": [
-        { "id": "aideChat", "title": "Chat", "icon": "resources/aide-chat.svg" }
-      ]
-    },
     "views": {
-      "aideChat": [
+      "workbench.view.extension.chat": [
         { "id": "aideChat.session", "name": "AIDE" }
       ]
     },
@@ -80,22 +75,10 @@
         }
       ],
       "aide.chat.contextMenu": [
-        {
-          "command": "aide.chat.context.roadmap",
-          "group": "1"
-        },
-        {
-          "command": "aide.chat.context.checklist",
-          "group": "1"
-        },
-        {
-          "command": "aide.chat.context.todos",
-          "group": "1"
-        },
-        {
-          "command": "aide.chat.context.snapshots",
-          "group": "1"
-        }
+        { "command": "aide.chat.context.roadmap", "group": "1" },
+        { "command": "aide.chat.context.checklist", "group": "1" },
+        { "command": "aide.chat.context.todos", "group": "1" },
+        { "command": "aide.chat.context.snapshots", "group": "1" }
       ]
     }
   }
