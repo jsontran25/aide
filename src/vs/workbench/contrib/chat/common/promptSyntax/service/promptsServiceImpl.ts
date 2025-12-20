@@ -538,7 +538,13 @@ export class PromptsService extends Disposable implements IPromptsService {
 		if (!useAideInstructionFiles) {
 			return [];
 		}
+
 		return await this.fileLocator.findAideInstructionsMDsInWorkspace(token);
+	}
+
+	/** Legacy name (compat) */
+	public async listCopilotInstructionsMDs(token: CancellationToken): Promise<URI[]> {
+		return this.listAideInstructionsMDs(token);
 	}
 
 	public getAgentFileURIFromModeFile(oldURI: URI): URI | undefined {
@@ -804,13 +810,9 @@ namespace IAgentSource {
 			return {
 				storage: PromptsStorage.extension,
 				extensionId: promptPath.extension.identifier,
-				type: promptPath.source
-			};
-		} else {
-			return {
-				storage: promptPath.storage
+				type: promptPath.source,
 			};
 		}
+		return { storage: promptPath.storage };
 	}
 }
-

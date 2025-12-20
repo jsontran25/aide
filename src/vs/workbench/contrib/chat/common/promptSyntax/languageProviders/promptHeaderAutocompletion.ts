@@ -220,7 +220,7 @@ export class PromptHeaderAutocompletion implements CompletionItemProvider {
 				break;
 			case PromptHeaderAttributes.target:
 				if (promptType === PromptsType.agent) {
-					return ['aide-ide', 'aide'];
+					return ['aide', 'aide-ide'];
 				}
 				break;
 			case PromptHeaderAttributes.tools:

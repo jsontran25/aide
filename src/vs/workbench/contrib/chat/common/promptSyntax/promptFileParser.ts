@@ -82,17 +82,11 @@ export namespace GithubPromptHeaderAttributes {
 }
 
 export const enum Target {
-	/**
-	 * Stable protocol values (do not change): used in prompt headers and persisted data.
-	 */
 	VSCode = 'vscode',
 	GitHubCopilot = 'github-copilot',
-
-	/**
-	 * AIDE aliases for branding. Keep values identical to preserve compatibility.
-	 */
-	AIDE = 'vscode',
-	GitHubAIDE = 'github-copilot',
+	// AIDE is a *naming alias* for the legacy 'github-copilot' target.
+	// We keep the protocol string stable for compatibility and migrate later.
+	AIDE = 'github-copilot'
 }
 
 export class PromptHeader {
