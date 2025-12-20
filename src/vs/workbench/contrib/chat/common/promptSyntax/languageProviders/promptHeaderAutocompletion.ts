@@ -16,7 +16,7 @@ import { getPromptsTypeForLanguageId, PromptsType } from '../promptTypes.js';
 import { IPromptsService } from '../service/promptsService.js';
 import { Iterable } from '../../../../../../base/common/iterator.js';
 import { PromptHeader, PromptHeaderAttributes } from '../promptFileParser.js';
-import { getValidAttributeNames, isGithubTarget, knownGithubCopilotTools } from './promptValidator.js';
+import { getValidAttributeNames, isGithubTarget, knownLegacyGitHubTools } from './promptValidator.js';
 import { localize } from '../../../../../../nls.js';
 
 export class PromptHeaderAutocompletion implements CompletionItemProvider {
@@ -220,7 +220,7 @@ export class PromptHeaderAutocompletion implements CompletionItemProvider {
 				break;
 			case PromptHeaderAttributes.target:
 				if (promptType === PromptsType.agent) {
-					return ['vscode', 'github-copilot'];
+					return ['aide-ide', 'aide'];
 				}
 				break;
 			case PromptHeaderAttributes.tools:
@@ -262,7 +262,7 @@ export class PromptHeaderAutocompletion implements CompletionItemProvider {
 		}
 		const getSuggestions = (toolRange: Range) => {
 			const suggestions: CompletionItem[] = [];
-			const toolNames = isGitHubTarget ? knownGithubCopilotTools : this.languageModelToolsService.getFullReferenceNames();
+			const toolNames = isGitHubTarget ? knownLegacyGitHubTools : this.languageModelToolsService.getFullReferenceNames();
 			for (const toolName of toolNames) {
 				let insertText: string;
 				if (!toolRange.isEmpty()) {

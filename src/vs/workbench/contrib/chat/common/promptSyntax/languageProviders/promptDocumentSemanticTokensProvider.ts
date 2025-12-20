@@ -34,7 +34,7 @@ export class PromptDocumentSemanticTokensProvider implements DocumentSemanticTok
 		}
 
 		if (isGithubTarget(promptType, promptAST.header?.target)) {
-			// In GitHub Copilot mode, we don't provide variable semantic tokens to tool references
+			// In AIDE mode, we don't provide variable semantic tokens to tool references
 			return undefined;
 		}
 

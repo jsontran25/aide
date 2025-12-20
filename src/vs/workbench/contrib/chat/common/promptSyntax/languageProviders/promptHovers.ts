@@ -99,7 +99,7 @@ export class PromptHoverProvider implements HoverProvider {
 						case PromptHeaderAttributes.handOffs:
 							return this.getHandsOffHover(attribute, position, isGitHubTarget);
 						case PromptHeaderAttributes.target:
-							return this.createHover(localize('promptHeader.agent.target', 'The target to which the header attributes like tools apply to. Possible values are `github-copilot` and `vscode`.'), attribute.range);
+							return this.createHover(localize('promptHeader.agent.target', 'The target to which the header attributes like tools apply to. Possible values are `aide` and `aide-ide`.'), attribute.range);
 						case PromptHeaderAttributes.infer:
 							return this.createHover(localize('promptHeader.agent.infer', 'Whether the agent can be used as a subagent.'), attribute.range);
 					}
@@ -169,7 +169,7 @@ export class PromptHoverProvider implements HoverProvider {
 
 	private getModelHover(node: IHeaderAttribute, range: Range, baseMessage: string, isGitHubTarget: boolean): Hover | undefined {
 		if (isGitHubTarget) {
-			return this.createHover(baseMessage + '\n\n' + localize('promptHeader.agent.model.githubCopilot', 'Note: This attribute is not used when target is github-copilot.'), range);
+			return this.createHover(baseMessage + '\n\n' + localize('promptHeader.agent.model.legacyTarget', 'Note: This attribute is not used when target is a legacy GitHub agent target.'), range);
 		}
 		if (node.value.type === 'string') {
 			for (const id of this.languageModelsService.getLanguageModelIds()) {
@@ -226,7 +226,7 @@ export class PromptHoverProvider implements HoverProvider {
 	private getHandsOffHover(attribute: IHeaderAttribute, position: Position, isGitHubTarget: boolean): Hover | undefined {
 		const handoffsBaseMessage = localize('promptHeader.agent.handoffs', 'Possible handoff actions when the agent has completed its task.');
 		if (isGitHubTarget) {
-			return this.createHover(handoffsBaseMessage + '\n\n' + localize('promptHeader.agent.handoffs.githubCopilot', 'Note: This attribute is not used when target is github-copilot.'), attribute.range);
+			return this.createHover(handoffsBaseMessage + '\n\n' + localize('promptHeader.agent.handoffs.legacyTarget', 'Note: This attribute is not used when target is a legacy GitHub agent target.'), attribute.range);
 		}
 		return this.createHover(handoffsBaseMessage, attribute.range);
 

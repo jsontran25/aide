@@ -111,7 +111,7 @@ export class PromptCodeActionProvider implements CodeActionProvider {
 			return;
 		}
 		if (isGithubTarget(promptType, promptFile.header?.target)) {
-			// GitHub Copilot custom agents use a fixed set of tool names that are not deprecated
+			// AIDE custom agents use a fixed set of tool names that are not deprecated
 			return;
 		}
 
