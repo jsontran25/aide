@@ -49,6 +49,7 @@ import { ChatSetupAnonymous } from './chatSetup.js';
 import { ChatSetupController } from './chatSetupController.js';
 import { AICodeActionsHelper, AINewSymbolNamesProvider, ChatCodeActionsProvider, SetupAgent } from './chatSetupProviders.js';
 import { ChatSetup } from './chatSetupRunner.js';
+import { LEGACY_COPILOT_CHAT_EXPLAIN_COMMAND_ID, LEGACY_COPILOT_CHAT_FIX_COMMAND_ID, LEGACY_COPILOT_CHAT_GENERATE_DOCS_COMMAND_ID, LEGACY_COPILOT_CHAT_GENERATE_TESTS_COMMAND_ID, LEGACY_COPILOT_CHAT_REVIEW_COMMAND_ID } from '../../../../../platform/compat/common/legacyCopilot.js';
 
 const defaultChat = {
 	chatExtensionId: product.defaultChatAgent?.chatExtensionId ?? '',
@@ -467,11 +468,11 @@ export class ChatSetupContribution extends Disposable implements IWorkbenchContr
 				}
 			});
 		}
-		registerGenerateCodeCommand('chat.internal.explain', 'github.copilot.chat.explain');
-		registerGenerateCodeCommand('chat.internal.fix', 'github.copilot.chat.fix');
-		registerGenerateCodeCommand('chat.internal.review', 'github.copilot.chat.review');
-		registerGenerateCodeCommand('chat.internal.generateDocs', 'github.copilot.chat.generateDocs');
-		registerGenerateCodeCommand('chat.internal.generateTests', 'github.copilot.chat.generateTests');
+		registerGenerateCodeCommand('chat.internal.explain', LEGACY_COPILOT_CHAT_EXPLAIN_COMMAND_ID);
+		registerGenerateCodeCommand('chat.internal.fix', LEGACY_COPILOT_CHAT_FIX_COMMAND_ID);
+		registerGenerateCodeCommand('chat.internal.review', LEGACY_COPILOT_CHAT_REVIEW_COMMAND_ID);
+		registerGenerateCodeCommand('chat.internal.generateDocs', LEGACY_COPILOT_CHAT_GENERATE_DOCS_COMMAND_ID);
+		registerGenerateCodeCommand('chat.internal.generateTests', LEGACY_COPILOT_CHAT_GENERATE_TESTS_COMMAND_ID);
 
 		const internalGenerateCodeContext = ContextKeyExpr.and(
 			ChatContextKeys.Setup.hidden.negate(),

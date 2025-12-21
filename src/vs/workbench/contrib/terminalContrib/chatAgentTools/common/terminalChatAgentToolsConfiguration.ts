@@ -11,6 +11,7 @@ import { TerminalSettingId } from '../../../../../platform/terminal/common/termi
 import product from '../../../../../platform/product/common/product.js';
 import { terminalProfileBaseProperties } from '../../../../../platform/terminal/common/terminalPlatformConfiguration.js';
 import { PolicyCategory } from '../../../../../base/common/policy.js';
+import { LEGACY_COPILOT_CHAT_AGENT_TERMINAL_ALLOWLIST_SETTING, LEGACY_COPILOT_CHAT_AGENT_TERMINAL_DENYLIST_SETTING } from '../../../../../platform/compat/common/legacyCopilot.js';
 
 export const enum TerminalChatAgentToolsSettingId {
 	EnableAutoApprove = 'chat.tools.terminal.enableAutoApprove',
@@ -28,8 +29,8 @@ export const enum TerminalChatAgentToolsSettingId {
 	DeprecatedAutoApproveCompatible = 'chat.agent.terminal.autoApprove',
 	DeprecatedAutoApprove1 = 'chat.agent.terminal.allowList',
 	DeprecatedAutoApprove2 = 'chat.agent.terminal.denyList',
-	DeprecatedAutoApprove3 = 'github.copilot.chat.agent.terminal.allowList',
-	DeprecatedAutoApprove4 = 'github.copilot.chat.agent.terminal.denyList',
+	DeprecatedAutoApprove3 = LEGACY_COPILOT_CHAT_AGENT_TERMINAL_ALLOWLIST_SETTING,
+	DeprecatedAutoApprove4 = LEGACY_COPILOT_CHAT_AGENT_TERMINAL_DENYLIST_SETTING,
 }
 
 export interface ITerminalChatAgentToolsConfiguration {

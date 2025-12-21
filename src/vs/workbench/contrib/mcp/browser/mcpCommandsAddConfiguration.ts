@@ -31,6 +31,7 @@ import { McpCommandIds } from '../common/mcpCommandIds.js';
 import { allDiscoverySources, DiscoverySource, mcpDiscoverySection, mcpStdioServerSchema } from '../common/mcpConfiguration.js';
 import { IMcpRegistry } from '../common/mcpRegistryTypes.js';
 import { IMcpService, McpConnectionState } from '../common/mcpTypes.js';
+import { LEGACY_COPILOT_MCP_SETUP_CHECK_COMMAND_ID, LEGACY_COPILOT_MCP_SETUP_FLOW_COMMAND_ID, LEGACY_COPILOT_MCP_SETUP_VALIDATE_PACKAGE_COMMAND_ID } from '../../../../platform/compat/common/legacyCopilot.js';
 
 export const enum AddConfigurationType {
 	Stdio,
@@ -77,13 +78,13 @@ export const AssistedTypes = {
 
 const enum AddConfigurationCopilotCommand {
 	/** Returns whether MCP enhanced setup is enabled. */
-	IsSupported = 'github.copilot.chat.mcp.setup.check',
+	IsSupported = LEGACY_COPILOT_MCP_SETUP_CHECK_COMMAND_ID,
 
 	/** Takes an npm/pip package name, validates its owner. */
-	ValidatePackage = 'github.copilot.chat.mcp.setup.validatePackage',
+	ValidatePackage = LEGACY_COPILOT_MCP_SETUP_VALIDATE_PACKAGE_COMMAND_ID,
 
 	/** Returns the resolved MCP configuration. */
-	StartFlow = 'github.copilot.chat.mcp.setup.flow',
+	StartFlow = LEGACY_COPILOT_MCP_SETUP_FLOW_COMMAND_ID,
 }
 
 type ValidatePackageResult =

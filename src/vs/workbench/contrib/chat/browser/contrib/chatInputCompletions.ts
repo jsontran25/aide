@@ -59,6 +59,7 @@ import { ChatSubmitAction, IChatExecuteActionContext } from '../actions/chatExec
 import { IChatWidget, IChatWidgetService } from '../chat.js';
 import { resizeImage } from '../chatImageUtils.js';
 import { ChatDynamicVariableModel } from './chatDynamicVariables.js';
+import { LEGACY_COPILOT_TERMINAL_PANEL_AGENT_ID } from '../../../../../platform/compat/common/legacyCopilot.js';
 
 class SlashCommandCompletions extends Disposable {
 	constructor(
@@ -344,7 +345,7 @@ class AgentCompletions extends Disposable {
 				const getFilterText = (agent: IChatAgentData, command: string) => {
 					// This is hacking the filter algorithm to make @terminal /explain match worse than @workspace /explain by making its match index later in the string.
 					// When I type `/exp`, the workspace one should be sorted over the terminal one.
-					const dummyPrefix = agent.id === 'github.copilot.terminalPanel' ? `0000` : ``;
+					const dummyPrefix = agent.id === LEGACY_COPILOT_TERMINAL_PANEL_AGENT_ID ? `0000` : ``;
 					return `${chatAgentLeader}${dummyPrefix}${agent.name}.${command}`;
 				};
 
@@ -440,7 +441,7 @@ class AgentCompletions extends Disposable {
 
 						const { label: agentLabel, isDupe } = this.getAgentCompletionDetails(agent);
 						const withSlash = `${chatSubcommandLeader}${c.name}`;
-						const extraSortText = agent.id === 'github.copilot.terminalPanel' ? `z` : ``;
+						const extraSortText = agent.id === LEGACY_COPILOT_TERMINAL_PANEL_AGENT_ID ? `z` : ``;
 						const sortText = `${chatSubcommandLeader}${extraSortText}${agent.name}${c.name}`;
 						const item: CompletionItem = {
 							label: { label: withSlash, description: agentLabel, detail: isDupe ? ` (${agent.publisherDisplayName})` : undefined },

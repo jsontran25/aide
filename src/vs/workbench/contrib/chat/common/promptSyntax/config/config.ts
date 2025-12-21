@@ -7,6 +7,7 @@ import type { IConfigurationService } from '../../../../../../platform/configura
 import { URI } from '../../../../../../base/common/uri.js';
 import { PromptsType } from '../promptTypes.js';
 import { INSTRUCTIONS_DEFAULT_SOURCE_FOLDER, PROMPT_DEFAULT_SOURCE_FOLDER, getPromptFileDefaultLocation } from './promptFileLocations.js';
+import { LEGACY_COPILOT_USE_INSTRUCTION_FILES_SETTING } from '../../../../../../platform/compat/common/legacyCopilot.js';
 
 /**
  * Configuration helper for the `reusable prompts` feature.
@@ -66,7 +67,7 @@ export namespace PromptsConfig {
 	/**
 	 * Configuration key for use of the copilot instructions file.
 	 */
-	export const USE_AIDE_INSTRUCTION_FILES = 'github.copilot.chat.codeGeneration.useInstructionFiles';
+	export const USE_AIDE_INSTRUCTION_FILES = LEGACY_COPILOT_USE_INSTRUCTION_FILES_SETTING;
 	/** @deprecated Use USE_AIDE_INSTRUCTION_FILES (setting key kept for compatibility). */
 
 	/**

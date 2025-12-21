@@ -26,6 +26,7 @@ import { InlineSuggestionItem } from './inlineSuggestionItem.js';
 import { IInlineSuggestDataActionEdit, InlineCompletionContextWithoutUuid } from './provideInlineCompletions.js';
 import { InlineSuggestAlternativeAction } from './InlineSuggestAlternativeAction.js';
 import { Codicon } from '../../../../../base/common/codicons.js';
+import { LEGACY_COPILOT_NES_PREPARE_RENAME_COMMAND_ID } from '../../../../../platform/compat/common/legacyCopilot.js';
 
 enum RenameKind {
 	no = 'no',
@@ -429,7 +430,7 @@ export class RenameSymbolProcessor extends Disposable {
 		// return oldName === result.text ? RenameKind.yes : RenameKind.no;
 
 		try {
-			const result = await this._commandService.executeCommand<RenameKind>('github.copilot.nes.prepareRename', textModel.uri, position, oldName, newName, suggestItem.requestUuid);
+			const result = await this._commandService.executeCommand<RenameKind>(LEGACY_COPILOT_NES_PREPARE_RENAME_COMMAND_ID, textModel.uri, position, oldName, newName, suggestItem.requestUuid);
 			if (result === undefined) {
 				return RenameKind.no;
 			} else {

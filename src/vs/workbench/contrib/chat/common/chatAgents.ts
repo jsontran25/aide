@@ -29,6 +29,7 @@ import { IChatAgentEditedFileEvent, IChatProgressHistoryResponseContent, IChatRe
 import { IRawChatCommandContribution } from './chatParticipantContribTypes.js';
 import { IChatFollowup, IChatLocationData, IChatProgress, IChatResponseErrorDetails, IChatTaskDto } from './chatService.js';
 import { ChatAgentLocation, ChatConfiguration, ChatModeKind } from './constants.js';
+import { LEGACY_COPILOT_EDITS_AGENT_ID } from '../../../../platform/compat/common/legacyCopilot.js';
 
 //#region agent service, commands etc
 
@@ -312,7 +313,7 @@ export class ChatAgentService extends Disposable implements IChatAgentService {
 				if (!agent.isCore) {
 					extensionAgentRegistered = true;
 				}
-				if (agent.id === 'chat.setup' || agent.id === 'github.copilot.editsAgent') {
+				if (agent.id === 'chat.setup' || agent.id === LEGACY_COPILOT_EDITS_AGENT_ID) {
 					// TODO@roblourens firing the event below probably isn't necessary but leave it alone for now
 					toolsAgentRegistered = true;
 				} else {

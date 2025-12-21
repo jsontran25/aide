@@ -26,6 +26,7 @@ import { startServerAndWaitForLiveTools } from '../../../mcp/common/mcpTypesUtil
 import { ChatContextKeys } from '../../common/chatContextKeys.js';
 import { ILanguageModelToolsService, IToolData, ToolDataSource, ToolSet } from '../../common/languageModelToolsService.js';
 import { ConfigureToolSets } from '../tools/toolSetsContribution.js';
+import { LEGACY_COPILOT_VIRTUALTOOLS_THRESHOLD_SETTING } from '../../../../../platform/compat/common/legacyCopilot.js';
 
 const enum BucketOrdinal { User, BuiltIn, Mcp, Extension }
 
@@ -535,7 +536,7 @@ export async function showToolsPicker(
 		id: '_chat.toolPicker.closeAndOpenVirtualThreshold',
 		handler: () => {
 			treePicker.hide();
-			commandService.executeCommand('workbench.action.openSettings', 'github.copilot.chat.virtualTools.threshold');
+			commandService.executeCommand('workbench.action.openSettings', LEGACY_COPILOT_VIRTUALTOOLS_THRESHOLD_SETTING);
 		}
 	}));
 
