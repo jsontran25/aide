@@ -67,7 +67,7 @@ export const DEFAULT_AGENT_SKILLS_WORKSPACE_FOLDERS = [
  */
 export const DEFAULT_AGENT_SKILLS_USER_HOME_FOLDERS = [
 	{ path: '.aide/skills', type: 'aide-personal' },
-	/** @deprecated Legacy Copilot personal skills path/type (compat). */
+	/** @deprecated Legacy personal skills path/type (compat). */
 	{ path: LEGACY_COPILOT_SKILLS_DIR, type: 'aide-personal' },
 	{ path: '.claude/skills', type: 'claude-personal' }
 ] as const;

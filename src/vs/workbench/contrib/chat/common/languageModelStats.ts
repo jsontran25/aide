@@ -44,7 +44,7 @@ export class LanguageModelStatsService extends Disposable implements ILanguageMo
 }
 
 /** Primary feature id used by AIDE (legacy string kept for compat) */
-export const AIDEUsageExtensionFeatureId = 'copilot';
+export const AIDEUsageExtensionFeatureId = 'aide';
 
 /** @deprecated legacy name */
 Registry.as<IExtensionFeaturesRegistry>(Extensions.ExtensionFeaturesRegistry).registerExtensionFeature({
