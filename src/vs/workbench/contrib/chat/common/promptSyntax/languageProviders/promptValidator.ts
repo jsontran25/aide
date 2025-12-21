@@ -332,7 +332,7 @@ export class PromptValidator {
 
 		switch (attribute.value.type) {
 			case 'array':
-				if (target === Target.GitHubCopilot) {
+				if ((target === Target.AIDE || target === Target.GitHubCopilot)) {
 					// no validation for aide target
 				} else {
 					this.validateVSCodeTools(attribute.value, target, report);
@@ -489,7 +489,7 @@ export class PromptValidator {
 			report(toMarker(localize('promptValidator.targetMustBeNonEmpty', "The 'target' attribute must be a non-empty string."), attribute.value.range, MarkerSeverity.Error));
 			return;
 		}
-		const validTargets = ['aide', 'aide-ide'];
+		const validTargets = ['aide', 'aide-ide', 'github-copilot', 'vscode'];
 		if (!validTargets.includes(targetValue)) {
 			report(toMarker(localize('promptValidator.targetInvalidValue', "The 'target' attribute must be one of: {0}.", validTargets.join(', ')), attribute.value.range, MarkerSeverity.Error));
 		}
@@ -529,7 +529,7 @@ export const knownGithubCopilotTools = knownGithubAIDETools;
 
 
 export function isGithubTarget(promptType: PromptsType, target: string | undefined): boolean {
-	return promptType === PromptsType.agent && target === Target.GitHubCopilot;
+	return promptType === PromptsType.agent && (target === Target.AIDE || target === Target.GitHubCopilot);
 }
 
 function toMarker(message: string, range: Range, severity = MarkerSeverity.Error): IMarkerData {

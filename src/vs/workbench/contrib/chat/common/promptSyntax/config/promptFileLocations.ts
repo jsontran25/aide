@@ -6,6 +6,7 @@
 import { URI } from '../../../../../../base/common/uri.js';
 import { basename, dirname } from '../../../../../../base/common/path.js';
 import { PromptsType } from '../promptTypes.js';
+import { LEGACY_COPILOT_SKILLS_DIR } from '../../compat/legacyCopilot.js';
 
 /**
  * File extension for the reusable prompt files.
@@ -65,7 +66,9 @@ export const DEFAULT_AGENT_SKILLS_WORKSPACE_FOLDERS = [
  * Default agent skills user home source folders.
  */
 export const DEFAULT_AGENT_SKILLS_USER_HOME_FOLDERS = [
-	{ path: '.copilot/skills', type: 'copilot-personal' },
+	{ path: '.aide/skills', type: 'aide-personal' },
+	/** @deprecated Legacy Copilot personal skills path/type (compat). */
+	{ path: LEGACY_COPILOT_SKILLS_DIR, type: 'aide-personal' },
 	{ path: '.claude/skills', type: 'claude-personal' }
 ] as const;
 

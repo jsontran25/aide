@@ -38,16 +38,17 @@ export class LanguageModelStatsService extends Disposable implements ILanguageMo
 	}
 
 	async update(model: string, extensionId: ExtensionIdentifier, agent: string | undefined, tokenCount: number | undefined): Promise<void> {
-		await this.extensionFeaturesManagementService.getAccess(extensionId, CopilotUsageExtensionFeatureId);
+		await this.extensionFeaturesManagementService.getAccess(extensionId, AIDEUsageExtensionFeatureId);
 	}
 
 }
 
-export const CopilotUsageExtensionFeatureId = 'copilot';
-export const AIDEUsageExtensionFeatureId = CopilotUsageExtensionFeatureId;
+/** Primary feature id used by AIDE (legacy string kept for compat) */
+export const AIDEUsageExtensionFeatureId = 'copilot';
 
+/** @deprecated legacy name */
 Registry.as<IExtensionFeaturesRegistry>(Extensions.ExtensionFeaturesRegistry).registerExtensionFeature({
-	id: CopilotUsageExtensionFeatureId,
+	id: AIDEUsageExtensionFeatureId,
 	label: localize('Language Models', "AIDE"),
 	description: localize('languageModels', "Language models usage statistics of this extension."),
 	icon: Codicon.copilot,

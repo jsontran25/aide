@@ -67,6 +67,6 @@ export class MockPromptsService implements IPromptsService {
 		return [];
 	}
 
-	listCopilotInstructionsMDs(token: CancellationToken): Promise<URI[]> { throw new Error('Not implemented'); }
+	listAideInstructionsMDs(token: CancellationToken): Promise<URI[]> { throw new Error('Not implemented'); }
 
 }

@@ -534,7 +534,7 @@ export class PromptsService extends Disposable implements IPromptsService {
 	}
 
 	public async listAideInstructionsMDs(token: CancellationToken): Promise<URI[]> {
-		const useAideInstructionFiles = this.configurationService.getValue(PromptsConfig.USE_COPILOT_INSTRUCTION_FILES);
+		const useAideInstructionFiles = this.configurationService.getValue(PromptsConfig.USE_AIDE_INSTRUCTION_FILES);
 		if (!useAideInstructionFiles) {
 			return [];
 		}
@@ -543,7 +543,7 @@ export class PromptsService extends Disposable implements IPromptsService {
 	}
 
 	/** Legacy name (compat) */
-	public async listCopilotInstructionsMDs(token: CancellationToken): Promise<URI[]> {
+	public async listAideInstructionsMDs(token: CancellationToken): Promise<URI[]> {
 		return this.listAideInstructionsMDs(token);
 	}
 
@@ -629,6 +629,9 @@ export class PromptsService extends Disposable implements IPromptsService {
 			const result: IAgentSkill[] = [];
 			const seenNames = new Set<string>();
 			const skillTypes = new Map<string, number>();
+
+			const AIDE_PERSONAL_SKILL_TYPE = 'aide-personal';
+			/** @deprecated Legacy key (compat). */
 			let skippedMissingName = 0;
 			let skippedDuplicateName = 0;
 			let skippedParseFailed = 0;
@@ -702,7 +705,7 @@ export class PromptsService extends Disposable implements IPromptsService {
 				totalSkillsFound: result.length,
 				claudePersonal: skillTypes.get('claude-personal') ?? 0,
 				claudeWorkspace: skillTypes.get('claude-workspace') ?? 0,
-				aidePersonal: skillTypes.get('copilot-personal') ?? 0,
+				aidePersonal: (skillTypes.get(AIDE_PERSONAL_SKILL_TYPE) ?? 0),
 				githubWorkspace: skillTypes.get('github-workspace') ?? 0,
 				customPersonal: skillTypes.get('custom-personal') ?? 0,
 				customWorkspace: skillTypes.get('custom-workspace') ?? 0,

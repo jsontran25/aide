@@ -295,11 +295,13 @@ export interface IPromptsService extends IDisposable {
 	listAgentMDs(token: CancellationToken, includeNested: boolean): Promise<URI[]>;
 
 	/**
-	 * Gets list of .github/copilot-instructions.md files.
+	 * Gets list of instruction files from the repository (stored in standard instruction locations).
 	 */
 	listAideInstructionsMDs(token: CancellationToken): Promise<URI[]>;
 	/** Legacy name (compat) */
-	listCopilotInstructionsMDs(token: CancellationToken): Promise<URI[]>;
+	/** @deprecated Use listAideInstructionsMDs */
+
+	listAideInstructionsMDs(token: CancellationToken): Promise<URI[]>;
 
 	/**
 	 * For a chat mode file URI, return the name of the agent file that it should use.

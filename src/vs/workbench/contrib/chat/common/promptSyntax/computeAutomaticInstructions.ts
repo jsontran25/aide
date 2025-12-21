@@ -40,7 +40,7 @@ export function newInstructionsCollectionEvent(): InstructionsCollectionEvent {
 type InstructionsCollectionClassification = {
 	applyingInstructionsCount: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of instructions added via pattern matching.' };
 	referencedInstructionsCount: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of instructions added via references from other instruction files.' };
-	agentInstructionsCount: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of agent instructions added (copilot-instructions.md and agents.md).' };
+	agentInstructionsCount: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of agent instructions added (instruction files and agents.md).' };
 	listedInstructionsCount: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Number of instruction patterns added.' };
 	totalInstructionsCount: { classification: 'SystemMetaData'; purpose: 'FeatureInsight'; isMeasurement: true; comment: 'Total number of instruction entries added to variables.' };
 	owner: 'digitarald';
@@ -169,7 +169,7 @@ export class ComputeAutomaticInstructions {
 	}
 
 	private async _addAgentInstructions(variables: ChatRequestVariableSet, telemetryEvent: InstructionsCollectionEvent, token: CancellationToken): Promise<void> {
-		const useAideInstructionFiles = this._configurationService.getValue(PromptsConfig.USE_COPILOT_INSTRUCTION_FILES);
+		const useAideInstructionFiles = this._configurationService.getValue(PromptsConfig.USE_AIDE_INSTRUCTION_FILES);
 		const useAgentMd = this._configurationService.getValue(PromptsConfig.USE_AGENT_MD);
 		if (!useAideInstructionFiles && !useAgentMd) {
 			this._logService.trace(`[InstructionsContextComputer] No agent instructions files added (settings disabled).`);
@@ -180,7 +180,7 @@ export class ComputeAutomaticInstructions {
 		if (useAideInstructionFiles) {
 			const files: URI[] = await this._promptsService.listAideInstructionsMDs(token);
 			for (const file of files) {
-				entries.add(toPromptFileVariableEntry(file, PromptFileVariableKind.Instruction, localize('instruction.file.reason.copilot', 'Automatically attached as setting {0} is enabled', PromptsConfig.USE_COPILOT_INSTRUCTION_FILES), true));
+				entries.add(toPromptFileVariableEntry(file, PromptFileVariableKind.Instruction, localize('instruction.file.reason.aide', 'Automatically attached as setting {0} is enabled', PromptsConfig.USE_AIDE_INSTRUCTION_FILES), true));
 				telemetryEvent.agentInstructionsCount++;
 				this._logService.trace(`[InstructionsContextComputer] copilot-instruction.md files added: ${file.toString()}`);
 			}

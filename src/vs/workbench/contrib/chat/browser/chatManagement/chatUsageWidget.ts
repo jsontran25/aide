@@ -54,7 +54,7 @@ export class ChatUsageWidget extends Disposable {
 			this.renderLimitedQuotaItem(this.usageSection, localize('completionsLabel', 'Inline Suggestions'));
 			this.renderLimitedQuotaItem(this.usageSection, localize('chatsLabel', 'Chat messages'));
 		}
-		// Copilot Usage section - show detailed breakdown of all quotas
+		// AIDE Usage section - show detailed breakdown of all quotas
 		else if (completionsQuota || chatQuota || premiumChatQuota) {
 			// Inline Suggestions
 			if (completionsQuota) {
