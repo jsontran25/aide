@@ -628,8 +628,8 @@ suite('PromptsService', () => {
 			);
 		});
 
-		test('copilot-instructions and AGENTS.md', async () => {
-			const rootFolderName = 'copilot-instructions-and-agents';
+		test('aide-instructions and AGENTS.md', async () => {
+			const rootFolderName = 'aide-instructions-and-agents';
 			const rootFolder = `/${rootFolderName}`;
 			const rootFolderUri = URI.file(rootFolder);
 
@@ -656,7 +656,7 @@ suite('PromptsService', () => {
 					]
 				},
 				{
-					path: `${rootFolder}/.github/copilot-instructions.md`,
+					path: `${rootFolder}/.github/aide-instructions.md`,
 					contents: [
 						'Be nice and friendly. Also look at instructions at #file:../codestyle.md and [more-codestyle.md](./more-codestyle.md).',
 					]
@@ -685,7 +685,7 @@ suite('PromptsService', () => {
 			assert.deepStrictEqual(
 				context.asArray().map(i => isPromptFileVariableEntry(i) ? i.value.path : undefined).filter(e => !!e).sort(),
 				[
-					URI.joinPath(rootFolderUri, '.github/copilot-instructions.md').path,
+					URI.joinPath(rootFolderUri, '.github/aide-instructions.md').path,
 					URI.joinPath(rootFolderUri, '.github/more-codestyle.md').path,
 					URI.joinPath(rootFolderUri, 'AGENTS.md').path,
 					URI.joinPath(rootFolderUri, 'codestyle.md').path,

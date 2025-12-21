@@ -31,8 +31,8 @@ suite('Prompt Constants', () => {
 			);
 
 			assert.strictEqual(
-				getCleanPromptName(URI.file('.github/copilot-instructions.md')),
-				'copilot-instructions',
+				getCleanPromptName(URI.file('.github/aide-instructions.md')),
+				'aide-instructions',
 			);
 
 			assert.strictEqual(
@@ -67,7 +67,7 @@ suite('Prompt Constants', () => {
 			);
 
 			assert(
-				isPromptOrInstructionsFile(URI.file('.github/copilot-instructions.md')),
+				isPromptOrInstructionsFile(URI.file('.github/aide-instructions.md')),
 			);
 		});
 

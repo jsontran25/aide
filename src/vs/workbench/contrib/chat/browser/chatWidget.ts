@@ -961,7 +961,7 @@ export class ChatWidget extends Disposable implements IChatWidget {
 	}
 
 	/**
-	 * Checks if any agent instruction files (.github/copilot-instructions.md or AGENTS.md) exist in the workspace.
+	 * Checks if any agent instruction files (.github/aide-instructions.md or AGENTS.md) exist in the workspace.
 	 * Used to determine whether to show the "Generate Agent Instructions" hint.
 	 *
 	 * @returns true if instruction files exist OR if instruction features are disabled (to hide the hint)
@@ -2606,7 +2606,7 @@ export class ChatWidget extends Disposable implements IChatWidget {
 	/**
 	 * Adds additional instructions to the context
 	 * - instructions that have a 'applyTo' pattern that matches the current input
-	 * - instructions referenced in the copilot settings 'copilot-instructions'
+	 * - instructions referenced in the copilot settings 'aide-instructions'
 	 * - instructions referenced in an already included instruction file
 	 */
 	private async _autoAttachInstructions({ attachedContext }: IChatRequestInputOptions): Promise<void> {

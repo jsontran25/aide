@@ -53,8 +53,8 @@ suite('promptFileLocations', function () {
 			assert.strictEqual(getPromptFileType(uri), undefined);
 		});
 
-		test('copilot-instructions.md should be recognized as instructions', () => {
-			const uri = URI.file('/workspace/.github/copilot-instructions.md');
+		test('aide-instructions.md should be recognized as instructions', () => {
+			const uri = URI.file('/workspace/.github/aide-instructions.md');
 			assert.strictEqual(getPromptFileType(uri), PromptsType.instructions);
 		});
 
@@ -90,9 +90,9 @@ suite('promptFileLocations', function () {
 			assert.strictEqual(getCleanPromptName(uri), 'demonstrate');
 		});
 
-		test('removes .md extension for copilot-instructions.md', () => {
-			const uri = URI.file('/workspace/.github/copilot-instructions.md');
-			assert.strictEqual(getCleanPromptName(uri), 'copilot-instructions');
+		test('removes .md extension for aide-instructions.md', () => {
+			const uri = URI.file('/workspace/.github/aide-instructions.md');
+			assert.strictEqual(getCleanPromptName(uri), 'aide-instructions');
 		});
 
 		test('keeps .md extension for regular files', () => {

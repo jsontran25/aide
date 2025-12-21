@@ -358,7 +358,7 @@ export class PromptFilePickers {
 			result.push(...await Promise.all(locals.map(l => this._createPromptPickItem(l, buttons, getVisibility(l), token))));
 		}
 
-		// Agent instruction files (copilot-instructions.md and AGENTS.md) are added here and not included in the output of
+		// Agent instruction files (aide-instructions.md and AGENTS.md) are added here and not included in the output of
 		// listPromptFilesForStorage() because that function only handles *.instructions.md files (under `.github/instructions/`, etc.)
 		let agentInstructionFiles: IPromptPath[] = [];
 		if (options.type === PromptsType.instructions) {
@@ -369,7 +369,7 @@ export class PromptFilePickers {
 			];
 			agentInstructionFiles = agentInstructionUris.map(uri => {
 				const folderName = this._labelService.getUriLabel(dirname(uri), { relative: true });
-				// Don't show the folder path for files under .github folder (namely, copilot-instructions.md) since that is only defined once per repo.
+				// Don't show the folder path for files under .github folder (namely, aide-instructions.md) since that is only defined once per repo.
 				const shouldShowFolderPath = folderName?.toLowerCase() !== '.github';
 				return {
 					uri,
